@@ -570,6 +570,7 @@ const els = {
   toolGrid: document.querySelector("#toolGrid"),
   categoryList: document.querySelector("#categoryList"),
   quickGrid: document.querySelector("#quickGrid"),
+  spotlightList: document.querySelector("#spotlightList"),
   resultTitle: document.querySelector("#resultTitle"),
   resultMeta: document.querySelector("#resultMeta"),
   activeTags: document.querySelector("#activeTags"),
@@ -584,6 +585,7 @@ const els = {
 
 document.addEventListener("DOMContentLoaded", () => {
   hydrateStats();
+  renderSpotlight();
   renderQuickLinks();
   renderCategories();
   bindEvents();
@@ -680,6 +682,23 @@ function renderQuickLinks() {
   });
 }
 
+function renderSpotlight() {
+  const spotlightNames = ["ChatGPT", "Midjourney", "Runway", "Cursor"];
+  const picks = spotlightNames
+    .map((name) => tools.find((tool) => tool.name === name))
+    .filter(Boolean);
+  els.spotlightList.innerHTML = picks.map((tool) => `
+    <div class="spotlight-item">
+      <span class="spotlight-logo" style="--logo-bg:${tool.color}">${escapeHtml(getInitials(tool.name))}</span>
+      <div>
+        <strong>${escapeHtml(tool.name)}</strong>
+        <span>${escapeHtml(tool.categoryName)} · ${escapeHtml(tool.tags[0])}</span>
+      </div>
+      <a href="${tool.url}" target="_blank" rel="noopener noreferrer" aria-label="访问 ${escapeHtml(tool.name)}">↗</a>
+    </div>
+  `).join("");
+}
+
 function renderCategories() {
   els.categoryList.innerHTML = categories.map((category) => {
     const count = category.id === "all" ? tools.length : tools.filter((tool) => tool.categoryId === category.id).length;
@@ -774,7 +793,7 @@ function renderTools(items) {
     const favorite = state.favorites.has(tool.id);
     const initials = getInitials(tool.name);
     return `
-      <article class="tool-card">
+      <article class="tool-card" style="--logo-bg:${tool.color}">
         <div class="tool-head">
           <span class="tool-logo" style="--logo-bg:${tool.color}">${escapeHtml(initials)}</span>
           <div>

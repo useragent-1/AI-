@@ -28,22 +28,32 @@
 
     <main id="top">
       <section class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">AI Tools Directory</p>
-          <h1>AI 导航星图</h1>
-          <p class="hero-lead">按真实任务分类的 AI 工具导航，搜索、筛选、收藏、直达官网。</p>
-          <form class="search-panel" role="search" aria-label="搜索 AI 工具">
-            <label class="search-field" for="searchInput">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20 20-4.7-4.7m2.2-5.3a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
-              <input id="searchInput" type="search" placeholder="搜索 ChatGPT、视频生成、SEO、代码、PPT..." autocomplete="off">
-            </label>
-            <button class="search-button" type="submit">搜索</button>
-          </form>
-          <div class="stat-strip" aria-label="站点统计">
-            <span><strong id="toolTotal">0</strong> 工具</span>
-            <span><strong id="categoryTotal">0</strong> 分类</span>
-            <span><strong id="freeTotal">0</strong> 免费/开源</span>
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">AI Tools Directory</p>
+            <h1>AI 导航星图</h1>
+            <p class="hero-lead">最全 AI 工具导航台。按任务、价格和分类快速找到能直接解决问题的 AI 产品。</p>
+            <form class="search-panel" role="search" aria-label="搜索 AI 工具">
+              <label class="search-field" for="searchInput">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20 20-4.7-4.7m2.2-5.3a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
+                <input id="searchInput" type="search" placeholder="搜索 ChatGPT、视频生成、SEO、代码、PPT..." autocomplete="off">
+              </label>
+              <button class="search-button" type="submit">搜索</button>
+            </form>
+            <div class="stat-strip" aria-label="站点统计">
+              <span><strong id="toolTotal">0</strong> 工具</span>
+              <span><strong id="categoryTotal">0</strong> 分类</span>
+              <span><strong id="freeTotal">0</strong> 免费/开源</span>
+            </div>
           </div>
+          <aside class="hero-board" aria-label="精选 AI 工具">
+            <div class="board-top">
+              <span>今日推荐</span>
+              <strong>高频 AI 工具</strong>
+            </div>
+            <div class="spotlight-list" id="spotlightList"></div>
+            <a class="board-link" href="#directory">查看完整导航</a>
+          </aside>
         </div>
       </section>
 
