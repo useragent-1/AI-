@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="AI 导航星图：按任务分类发现 AI 工具，支持搜索、筛选、收藏和快速跳转。">
+    <title>AI 导航星图 - 全分类 AI 工具导航</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="AI 导航星图首页">
+        <span class="brand-mark" aria-hidden="true">AI</span>
+        <span>
+          <strong>AI 导航星图</strong>
+          <small>All AI tools, one map</small>
+        </span>
+      </a>
+      <nav class="top-nav" aria-label="主导航">
+        <a href="#directory">导航</a>
+        <a href="#categories">分类</a>
+        <button class="icon-button" id="favoriteToggle" type="button" aria-label="只看收藏" title="只看收藏">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 17.3-5.3 3 1.4-5.9-4.6-4 6-.5L12 4.4l2.4 5.5 6 .5-4.6 4 1.4 5.9z"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">AI Tools Directory</p>
+          <h1>AI 导航星图</h1>
+          <p class="hero-lead">按真实任务分类的 AI 工具导航，搜索、筛选、收藏、直达官网。</p>
+          <form class="search-panel" role="search" aria-label="搜索 AI 工具">
+            <label class="search-field" for="searchInput">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20 20-4.7-4.7m2.2-5.3a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
+              <input id="searchInput" type="search" placeholder="搜索 ChatGPT、视频生成、SEO、代码、PPT..." autocomplete="off">
+            </label>
+            <button class="search-button" type="submit">搜索</button>
+          </form>
+          <div class="stat-strip" aria-label="站点统计">
+            <span><strong id="toolTotal">0</strong> 工具</span>
+            <span><strong id="categoryTotal">0</strong> 分类</span>
+            <span><strong id="freeTotal">0</strong> 免费/开源</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="quick-section" id="categories" aria-labelledby="quickTitle">
+        <div class="section-heading">
+          <p class="eyebrow">Browse by task</p>
+          <h2 id="quickTitle">热门任务入口</h2>
+        </div>
+        <div class="quick-grid" id="quickGrid"></div>
+      </section>
+
+      <section class="directory-shell" id="directory" aria-label="AI 工具目录">
+        <aside class="category-rail" aria-label="分类筛选">
+          <div class="rail-title">
+            <span>分类</span>
+            <button id="clearFilters" type="button">重置</button>
+          </div>
+          <div class="category-list" id="categoryList"></div>
+        </aside>
+
+        <section class="results-panel">
+          <div class="toolbar">
+            <div>
+              <p class="eyebrow">Directory</p>
+              <h2 id="resultTitle">全部 AI 工具</h2>
+              <p id="resultMeta" class="result-meta">正在加载...</p>
+            </div>
+            <div class="toolbar-actions">
+              <div class="segmented" aria-label="价格筛选">
+                <button class="active" type="button" data-price="all">全部</button>
+                <button type="button" data-price="free">免费</button>
+                <button type="button" data-price="freemium">免费增值</button>
+                <button type="button" data-price="paid">付费</button>
+              </div>
+              <label class="select-label">
+                <span>排序</span>
+                <select id="sortSelect">
+                  <option value="featured">精选优先</option>
+                  <option value="name">名称 A-Z</option>
+                  <option value="category">分类</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="active-tags" id="activeTags" aria-live="polite"></div>
+          <div class="tool-grid" id="toolGrid"></div>
+          <div class="empty-state" id="emptyState" hidden>
+            <strong>没有匹配结果</strong>
+            <span>换个关键词或清空筛选。</span>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>AI 导航星图</span>
+      <a href="#top">返回顶部</a>
+    </footer>
+
+    <script src="script.js" defer></script>
+  </body>
+</html>
