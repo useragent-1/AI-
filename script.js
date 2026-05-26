@@ -570,7 +570,9 @@ const els = {
   toolGrid: document.querySelector("#toolGrid"),
   categoryList: document.querySelector("#categoryList"),
   quickGrid: document.querySelector("#quickGrid"),
-  spotlightList: document.querySelector("#spotlightList"),
+  trendingList: document.querySelector("#trendingList"),
+  newList: document.querySelector("#newList"),
+  tagCloud: document.querySelector("#tagCloud"),
   resultTitle: document.querySelector("#resultTitle"),
   resultMeta: document.querySelector("#resultMeta"),
   activeTags: document.querySelector("#activeTags"),
@@ -585,7 +587,7 @@ const els = {
 
 document.addEventListener("DOMContentLoaded", () => {
   hydrateStats();
-  renderSpotlight();
+  renderSideRails();
   renderQuickLinks();
   renderCategories();
   bindEvents();
@@ -603,6 +605,15 @@ function bindEvents() {
   els.searchInput.addEventListener("input", (event) => {
     state.query = event.target.value.trim();
     render();
+  });
+
+  document.querySelectorAll("[data-query]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.query = button.dataset.query;
+      els.searchInput.value = state.query;
+      render();
+      document.querySelector("#directory").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   });
 
   document.querySelectorAll("[data-price]").forEach((button) => {
@@ -682,13 +693,19 @@ function renderQuickLinks() {
   });
 }
 
-function renderSpotlight() {
-  const spotlightNames = ["ChatGPT", "Midjourney", "Runway", "Cursor"];
-  const picks = spotlightNames
-    .map((name) => tools.find((tool) => tool.name === name))
-    .filter(Boolean);
-  els.spotlightList.innerHTML = picks.map((tool) => `
-    <div class="spotlight-item">
+function renderSideRails() {
+  const trendingNames = ["ChatGPT", "Midjourney", "Runway", "Cursor", "Perplexity"];
+  const trending = trendingNames.map((name) => tools.find((tool) => tool.name === name)).filter(Boolean);
+  const recent = tools.slice(-5).reverse();
+  els.trendingList.innerHTML = renderMiniList(trending);
+  els.newList.innerHTML = renderMiniList(recent);
+  const tags = ["文生图", "视频生成", "代码", "SEO", "会议", "自动化", "论文", "配音", "PPT", "电商"];
+  els.tagCloud.innerHTML = tags.map((tag) => `<button type="button" data-query="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`).join("");
+}
+
+function renderMiniList(items) {
+  return items.map((tool) => `
+    <div class="mini-item">
       <span class="spotlight-logo" style="--logo-bg:${tool.color}">${escapeHtml(getInitials(tool.name))}</span>
       <div>
         <strong>${escapeHtml(tool.name)}</strong>
