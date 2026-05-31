@@ -5,10 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="AI 导航星图：像大型 AI 工具目录一样搜索、筛选、收藏和发现 AI 工具。">
     <title>AI 导航星图 - AI 工具搜索目录</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=7">
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   </head>
   <body>
+    <div class="ambient-layer" aria-hidden="true">
+      <canvas class="ambient-canvas" id="ambientCanvas"></canvas>
+      <div class="ambient-glow ambient-glow-a"></div>
+      <div class="ambient-glow ambient-glow-b"></div>
+      <div class="ambient-spotlight"></div>
+    </div>
+
+    <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="#top" aria-label="AI 导航星图首页">
         <span class="brand-mark" aria-hidden="true">AI</span>
@@ -32,7 +40,7 @@
         <div class="hero-inner">
           <p class="directory-badge">THE AI TOOLS DIRECTORY</p>
           <h1>找到任何任务的 AI 工具</h1>
-          <p class="hero-lead">搜索 306 个 AI 产品，按任务、分类、价格和热度快速筛选。</p>
+          <p class="hero-lead">搜索 700 个 AI 产品，按任务、分类、价格和热度快速筛选。</p>
           <form class="search-panel" role="search" aria-label="搜索 AI 工具">
             <label class="search-field" for="searchInput">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20 20-4.7-4.7m2.2-5.3a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
@@ -86,6 +94,7 @@
                 <button type="button" data-price="freemium">免费增值</button>
                 <button type="button" data-price="paid">付费</button>
               </div>
+              <button class="new-filter-button" id="newOnlyToggle" type="button" aria-pressed="false">新增收录</button>
               <label class="select-label">
                 <span>Sort</span>
                 <select id="sortSelect">
@@ -100,8 +109,20 @@
           <div class="active-tags" id="activeTags" aria-live="polite"></div>
           <div class="tool-grid" id="toolGrid"></div>
           <div class="empty-state" id="emptyState" hidden>
-            <strong>没有匹配结果</strong>
-            <span>换个关键词或清空筛选。</span>
+            <div class="empty-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+            </div>
+            <strong id="emptyTitle">没有找到匹配的工具</strong>
+            <p class="empty-hint" id="emptyHint"></p>
+            <div class="empty-actions">
+              <button class="empty-action primary" type="button" id="emptyExpandSearch" hidden>在全站搜索</button>
+              <button class="empty-action" type="button" id="emptyClearQuery">清空搜索词</button>
+              <button class="empty-action subtle" type="button" id="emptyResetAll">重置全部筛选</button>
+            </div>
+            <section class="empty-suggestions" id="emptySuggestions" hidden>
+              <p class="empty-suggestions-label">相关推荐</p>
+              <div class="empty-suggestion-list" id="emptySuggestionList"></div>
+            </section>
           </div>
         </section>
 
@@ -135,7 +156,10 @@
       <span>AI 导航星图</span>
       <a href="#top">返回顶部</a>
     </footer>
+    </div>
 
-    <script src="script.js" defer></script>
+    <script src="ambient-bg.js?v=700" defer></script>
+    <script src="assets/logos/manifest.js?v=700"></script>
+    <script src="script.js?v=700" defer></script>
   </body>
 </html>
