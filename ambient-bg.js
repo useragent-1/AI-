@@ -1,87 +1,131 @@
 (function initAmbientBackground() {
   const canvas = document.getElementById("ambientCanvas");
+  const spotlight = document.querySelector(".ambient-spotlight");
+  const root = document.documentElement;
   if (!canvas) return;
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
-  const ctx = canvas.getContext("2d");
+  const narrowScreen = window.matchMedia("(max-width: 860px)").matches;
+  const ctx = canvas.getContext("2d", { alpha: true });
   let width = 0;
   let height = 0;
   let particles = [];
   let rafId = 0;
   let running = true;
 
+  let targetX = 0;
+  let targetY = 0;
+  let displayX = 0;
+  let displayY = 0;
+
   const palette = [
-    "rgba(255, 122, 26, 0.55)",
-    "rgba(49, 103, 255, 0.45)",
-    "rgba(120, 86, 255, 0.4)",
-    "rgba(21, 164, 106, 0.35)"
+    "rgba(255, 122, 26, 0.85)",
+    "rgba(49, 103, 255, 0.75)",
+    "rgba(120, 86, 255, 0.7)",
+    "rgba(21, 164, 106, 0.65)"
   ];
 
-  const particleCount = reducedMotion ? 0 : coarsePointer ? 28 : 48;
-  const linkDistance = coarsePointer ? 110 : 140;
+  const particleCount = reducedMotion || narrowScreen ? 0 : coarsePointer ? 28 : 44;
+  const linkDistance = coarsePointer ? 118 : 148;
+  const linkDistSq = linkDistance * linkDistance;
+  const pointerEase = coarsePointer ? 0.32 : 0.26;
 
-  function setPointer(x, y) {
-    const px = (x / Math.max(width, 1)) * 100;
-    const py = (y / Math.max(height, 1)) * 100;
-    document.documentElement.style.setProperty("--mx", `${px}%`);
-    document.documentElement.style.setProperty("--my", `${py}%`);
-    document.documentElement.style.setProperty("--grid-x", `${((px - 50) * 0.18).toFixed(2)}`);
-    document.documentElement.style.setProperty("--grid-y", `${((py - 50) * 0.18).toFixed(2)}`);
+  let mxCache = "";
+  let myCache = "";
+
+  function applyPointer(x, y) {
+    if (spotlight) {
+      spotlight.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+    }
+
+    const px = ((x / Math.max(width, 1)) * 100).toFixed(1);
+    const py = ((y / Math.max(height, 1)) * 100).toFixed(1);
+    const mx = `${px}%`;
+    const my = `${py}%`;
+    if (mx !== mxCache) {
+      mxCache = mx;
+      root.style.setProperty("--mx", mx);
+    }
+    if (my !== myCache) {
+      myCache = my;
+      root.style.setProperty("--my", my);
+    }
+  }
+
+  function stepPointer() {
+    const dx = targetX - displayX;
+    const dy = targetY - displayY;
+    if (Math.abs(dx) < 0.35 && Math.abs(dy) < 0.35) {
+      displayX = targetX;
+      displayY = targetY;
+    } else {
+      displayX += dx * pointerEase;
+      displayY += dy * pointerEase;
+    }
+    applyPointer(displayX, displayY);
   }
 
   function resize() {
     width = window.innerWidth;
     height = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     canvas.width = Math.floor(width * dpr);
     canvas.height = Math.floor(height * dpr);
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     seedParticles();
+    targetX = width * 0.5;
+    targetY = height * 0.28;
+    displayX = targetX;
+    displayY = targetY;
+    applyPointer(displayX, displayY);
   }
 
   function seedParticles() {
     particles = Array.from({ length: particleCount }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      vx: (Math.random() - 0.5) * 0.22,
-      vy: (Math.random() - 0.5) * 0.22,
-      r: 1.2 + Math.random() * 1.8,
-      color: palette[Math.floor(Math.random() * palette.length)]
+      vx: (Math.random() - 0.5) * 0.24,
+      vy: (Math.random() - 0.5) * 0.24,
+      r: 1.8 + Math.random() * 2.2,
+      color: palette[(Math.random() * palette.length) | 0]
     }));
   }
 
-  function draw() {
-    if (!running || particleCount === 0) return;
+  function drawParticles() {
     ctx.clearRect(0, 0, width, height);
 
     for (const particle of particles) {
       particle.x += particle.vx;
       particle.y += particle.vy;
       if (particle.x < -20) particle.x = width + 20;
-      if (particle.x > width + 20) particle.x = -20;
+      else if (particle.x > width + 20) particle.x = -20;
       if (particle.y < -20) particle.y = height + 20;
-      if (particle.y > height + 20) particle.y = -20;
+      else if (particle.y > height + 20) particle.y = -20;
     }
 
-    for (let i = 0; i < particles.length; i += 1) {
-      for (let j = i + 1; j < particles.length; j += 1) {
-        const a = particles[i];
+    const n = particles.length;
+    let hasLinks = false;
+    ctx.beginPath();
+    for (let i = 0; i < n; i += 1) {
+      const a = particles[i];
+      for (let j = i + 1; j < n; j += 1) {
         const b = particles[j];
         const dx = a.x - b.x;
         const dy = a.y - b.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist > linkDistance) continue;
-        const alpha = (1 - dist / linkDistance) * 0.22;
-        ctx.strokeStyle = `rgba(32, 27, 22, ${alpha})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
+        const distSq = dx * dx + dy * dy;
+        if (distSq > linkDistSq) continue;
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
-        ctx.stroke();
+        hasLinks = true;
       }
+    }
+    if (hasLinks) {
+      ctx.strokeStyle = "rgba(32, 27, 20, 0.18)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
 
     for (const particle of particles) {
@@ -90,29 +134,48 @@
       ctx.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
 
-    rafId = window.requestAnimationFrame(draw);
+  function tick() {
+    if (!running) return;
+    stepPointer();
+    if (particleCount > 0) drawParticles();
+    rafId = window.requestAnimationFrame(tick);
   }
 
   function onPointerMove(event) {
-    setPointer(event.clientX, event.clientY);
+    targetX = event.clientX;
+    targetY = event.clientY;
   }
 
   function onVisibilityChange() {
     running = document.visibilityState === "visible";
-    if (running && particleCount > 0) {
+    if (running) {
       window.cancelAnimationFrame(rafId);
-      draw();
+      tick();
     }
   }
 
   resize();
-  setPointer(width * 0.5, height * 0.28);
 
-  if (!reducedMotion && particleCount > 0) {
-    draw();
-    window.addEventListener("pointermove", onPointerMove, { passive: true });
+  if (reducedMotion || particleCount === 0) {
+    window.addEventListener(
+      "pointermove",
+      (event) => {
+        targetX = event.clientX;
+        targetY = event.clientY;
+        displayX = targetX;
+        displayY = targetY;
+        applyPointer(displayX, displayY);
+      },
+      { passive: true }
+    );
     window.addEventListener("resize", resize);
-    document.addEventListener("visibilitychange", onVisibilityChange);
+    return;
   }
+
+  tick();
+  window.addEventListener("pointermove", onPointerMove, { passive: true });
+  window.addEventListener("resize", resize);
+  document.addEventListener("visibilitychange", onVisibilityChange);
 })();

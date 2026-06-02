@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "stylePresets": [
+    { "id": "natural", "label": "自然朗读" },
+    { "id": "cheerful", "label": "开心活泼" },
+    { "id": "gentle", "label": "温柔沉稳" },
+    { "id": "serious", "label": "严肃正式" },
+    { "id": "northeast", "label": "东北话" },
+    { "id": "cantonese", "label": "粤语" },
+    { "id": "singing", "label": "唱歌" },
+    { "id": "custom", "label": "自定义…" }
+  ],
+  "providerAdapters": {
+    "mimo": "mimo-chat",
+    "openai": "openai-speech",
+    "azure-openai": "azure-speech",
+    "google-gemini": "openai-speech",
+    "openrouter": "openai-speech",
+    "siliconflow": "openai-speech",
+    "groq": "openai-speech",
+    "together": "openai-speech",
+    "fireworks": "openai-speech",
+    "deepseek": "openai-speech",
+    "mistral": "openai-speech",
+    "dashscope": "dashscope-tts",
+    "volcengine": "openai-speech",
+    "doubao": "openai-speech",
+    "minimax": "minimax-tts",
+    "baidu": "openai-speech",
+    "tencent": "openai-speech",
+    "iflytek": "openai-speech",
+    "stepfun": "openai-speech",
+    "lingyi": "openai-speech",
+    "moonshot": "openai-speech",
+    "zhipu": "openai-speech",
+    "sensenova": "openai-speech",
+    "ai360": "openai-speech"
+  },
+  "urlAdapters": [
+    { "includes": "xiaomimimo.com", "adapter": "mimo-chat" },
+    { "includes": "elevenlabs.io", "adapter": "elevenlabs" },
+    { "includes": "dashscope.aliyuncs.com", "adapter": "dashscope-tts" },
+    { "includes": "minimaxi.com", "adapter": "minimax-tts" },
+    { "includes": "minimax.chat", "adapter": "minimax-tts" },
+    { "includes": "volces.com", "adapter": "openai-speech" },
+    { "includes": "openai.azure.com", "adapter": "azure-speech" },
+    { "includes": "api.openai.com", "adapter": "openai-speech" },
+    { "includes": "openrouter.ai", "adapter": "openai-speech" },
+    { "includes": "siliconflow.cn", "adapter": "openai-speech" },
+    { "includes": "groq.com", "adapter": "openai-speech" },
+    { "includes": "together.xyz", "adapter": "openai-speech" },
+    { "includes": "fireworks.ai", "adapter": "openai-speech" },
+    { "includes": "deepseek.com", "adapter": "openai-speech" },
+    { "includes": "mistral.ai", "adapter": "openai-speech" },
+    { "includes": "hunyuan.cloud.tencent.com", "adapter": "openai-speech" },
+    { "includes": "qianfan.baidubce.com", "adapter": "openai-speech" },
+    { "includes": "generativelanguage.googleapis.com", "adapter": "openai-speech" }
+  ],
+  "modelAdapters": [
+    { "match": "mimo", "also": "tts", "adapter": "mimo-chat", "unless": "voicedesign|voiceclone" },
+    { "match": "sambert|cosyvoice", "adapter": "dashscope-tts" },
+    { "match": "speech-0|t2a", "adapter": "minimax-tts" },
+    { "match": "eleven", "adapter": "elevenlabs" }
+  ],
+  "adapters": {
+    "mimo-chat": {
+      "label": "小米 MiMo TTS",
+      "styleMode": "mimo",
+      "defaultVoice": "mimo_default",
+      "voices": [
+        { "id": "mimo_default", "label": "MiMo 默认" },
+        { "id": "冰糖", "label": "冰糖（中文女声）" },
+        { "id": "茉莉", "label": "茉莉（中文女声）" },
+        { "id": "苏打", "label": "苏打（中文男声）" },
+        { "id": "白桦", "label": "白桦（中文男声）" },
+        { "id": "Mia", "label": "Mia（英文女声）" },
+        { "id": "Chloe", "label": "Chloe（英文女声）" },
+        { "id": "Milo", "label": "Milo（英文男声）" },
+        { "id": "Dean", "label": "Dean（英文男声）" }
+      ]
+    },
+    "openai-speech": {
+      "label": "OpenAI 兼容 /audio/speech",
+      "styleMode": "openai-instructions",
+      "defaultVoice": "alloy",
+      "voices": [
+        { "id": "alloy", "label": "Alloy" },
+        { "id": "ash", "label": "Ash" },
+        { "id": "ballad", "label": "Ballad" },
+        { "id": "coral", "label": "Coral" },
+        { "id": "echo", "label": "Echo" },
+        { "id": "fable", "label": "Fable" },
+        { "id": "onyx", "label": "Onyx" },
+        { "id": "nova", "label": "Nova" },
+        { "id": "sage", "label": "Sage" },
+        { "id": "shimmer", "label": "Shimmer" },
+        { "id": "verse", "label": "Verse" },
+        { "id": "marin", "label": "Marin" },
+        { "id": "cedar", "label": "Cedar" }
+      ]
+    },
+    "azure-speech": {
+      "label": "Azure OpenAI 语音",
+      "styleMode": "openai-instructions",
+      "defaultVoice": "alloy",
+      "inheritsVoices": "openai-speech"
+    },
+    "elevenlabs": {
+      "label": "ElevenLabs",
+      "styleMode": "elevenlabs",
+      "defaultVoice": "EXAVITQu4vr4xnSDxMaL",
+      "fetchVoices": true,
+      "voices": [
+        { "id": "EXAVITQu4vr4xnSDxMaL", "label": "Sarah（默认）" },
+        { "id": "21m00Tcm4TlvDq8ikWAM", "label": "Rachel" },
+        { "id": "AZnzlk1XvdvUeBnXmlld", "label": "Domi" },
+        { "id": "ErXwobaYiN019PkySvjV", "label": "Antoni" }
+      ]
+    },
+    "dashscope-tts": {
+      "label": "阿里百炼 DashScope",
+      "styleMode": "dashscope",
+      "defaultVoice": "longxiaochun",
+      "voices": [
+        { "id": "longxiaochun", "label": "龙小淳（CosyVoice）" },
+        { "id": "longxiaoxia", "label": "龙小夏" },
+        { "id": "longlaotie", "label": "龙老铁" },
+        { "id": "longshu", "label": "龙叔" },
+        { "id": "longshuo", "label": "龙硕" },
+        { "id": "longjing", "label": "龙婧" },
+        { "id": "longmiao", "label": "龙妙" },
+        { "id": "longyuan", "label": "龙媛" },
+        { "id": "longwan", "label": "龙婉" },
+        { "id": "longfei", "label": "龙飞" },
+        { "id": "loongstella", "label": "Stella" }
+      ],
+      "sambertVoices": [
+        { "id": "zhichu", "label": "知厨（sambert）", "model": "sambert-zhichu-v1" },
+        { "id": "zhide", "label": "知德", "model": "sambert-zhide-v1" },
+        { "id": "zhijia", "label": "知佳", "model": "sambert-zhijia-v1" },
+        { "id": "zhinan", "label": "知楠", "model": "sambert-zhinan-v1" },
+        { "id": "zhiqi", "label": "知琪", "model": "sambert-zhiqi-v1" },
+        { "id": "zhiqian", "label": "知倩", "model": "sambert-zhiqian-v1" },
+        { "id": "zhiru", "label": "知茹", "model": "sambert-zhiru-v1" },
+        { "id": "zhiwei", "label": "知薇", "model": "sambert-zhiwei-v1" },
+        { "id": "zhitian", "label": "知甜", "model": "sambert-zhitian-v1" }
+      ]
+    },
+    "minimax-tts": {
+      "label": "MiniMax 语音",
+      "styleMode": "minimax",
+      "defaultVoice": "male-qn-qingse",
+      "voices": [
+        { "id": "male-qn-qingse", "label": "青涩男声" },
+        { "id": "male-qn-jingying", "label": "精英男声" },
+        { "id": "male-qn-badao", "label": "霸道男声" },
+        { "id": "female-shaonv", "label": "少女音" },
+        { "id": "female-yujie", "label": "御姐音" },
+        { "id": "female-chengshu", "label": "成熟女声" },
+        { "id": "female-tianmei", "label": "甜美女声" },
+        { "id": "presenter_male", "label": "男主持人" },
+        { "id": "presenter_female", "label": "女主持人" },
+        { "id": "audiobook_male_1", "label": "有声书男1" },
+        { "id": "audiobook_female_1", "label": "有声书女1" }
+      ]
+    },
+    "browser": {
+      "label": "浏览器朗读",
+      "styleMode": "none",
+      "voices": []
+    }
+  }
+}

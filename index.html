@@ -3,111 +3,162 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="AI 导航星图：像大型 AI 工具目录一样搜索、筛选、收藏和发现 AI 工具。">
-    <title>AI 导航星图 - AI 工具搜索目录</title>
-    <link rel="stylesheet" href="styles.css?v=7">
+    <meta name="description" content="NEUX — AI tools directory with search, filters, favorites, and compare.">
+    <meta name="theme-color" content="#fff8ea">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:title" content="NEUX">
+    <meta property="og:description" content="搜索 700+ AI 产品，按任务、分类、价格筛选，收藏与对比工具。">
+    <meta property="og:url" content="https://useragent-1.github.io/AI-/">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="NEUX">
+    <meta name="twitter:description" content="700+ AI 工具导航：搜索、筛选、收藏、对比。">
+    <link rel="canonical" href="https://useragent-1.github.io/AI-/">
+    <title>NEUX</title>
+    <link rel="stylesheet" href="styles.css?v=151">
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   </head>
   <body>
+    <a class="skip-link" href="#directory">跳到工具列表</a>
+    <div class="app-loading" id="appLoading" role="status" aria-live="polite">正在加载工具库…</div>
     <div class="ambient-layer" aria-hidden="true">
       <canvas class="ambient-canvas" id="ambientCanvas"></canvas>
       <div class="ambient-glow ambient-glow-a"></div>
       <div class="ambient-glow ambient-glow-b"></div>
+      <div class="ambient-glow ambient-glow-c"></div>
       <div class="ambient-spotlight"></div>
     </div>
 
     <div class="page-shell">
-    <header class="site-header">
-      <a class="brand" href="#top" aria-label="AI 导航星图首页">
-        <span class="brand-mark" aria-hidden="true">AI</span>
-        <span>
-          <strong>AI 导航星图</strong>
-          <small>AI tools directory</small>
-        </span>
-      </a>
-      <nav class="top-nav" aria-label="主导航">
-        <a href="#directory">工具</a>
-        <a href="#categories">分类</a>
-        <a href="#rankings">榜单</a>
-        <button class="icon-button" id="favoriteToggle" type="button" aria-label="只看收藏" title="只看收藏">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 17.3-5.3 3 1.4-5.9-4.6-4 6-.5L12 4.4l2.4 5.5 6 .5-4.6 4 1.4 5.9z"/></svg>
-        </button>
-      </nav>
-    </header>
-
     <main id="top">
-      <section class="hero">
+      <header class="app-chrome site-header" id="appChrome">
+        <div class="site-header-inner app-chrome-inner">
+          <a class="brand" href="#directory" aria-label="NEUX home">
+            <span class="brand-logo" aria-hidden="true">
+              <span class="brand-logo-core">NEU</span><span class="brand-logo-accent">X</span>
+            </span>
+          </a>
+          <nav class="top-nav" aria-label="主导航">
+            <a class="top-nav-link" href="#directory" data-nav="directory">工具</a>
+            <a class="top-nav-link" href="#rankings" data-nav="rankings">榜单</a>
+            <a class="top-nav-link" href="#lab" data-nav="lab">试验场</a>
+          </nav>
+        </div>
+      </header>
+
+      <div class="tools-view app-view" id="toolsView">
+      <section class="hero" id="hero">
         <div class="hero-inner">
-          <p class="directory-badge">THE AI TOOLS DIRECTORY</p>
+          <p class="directory-badge">
+            <span class="directory-badge-zh">AI 工具目录</span>
+            <span class="directory-badge-en">The AI Tools Directory</span>
+          </p>
           <h1>找到任何任务的 AI 工具</h1>
-          <p class="hero-lead">搜索 700 个 AI 产品，按任务、分类、价格和热度快速筛选。</p>
-          <form class="search-panel" role="search" aria-label="搜索 AI 工具">
-            <label class="search-field" for="searchInput">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20 20-4.7-4.7m2.2-5.3a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
-              <input id="searchInput" type="search" placeholder="I want an AI for videos, coding, SEO, writing..." autocomplete="off">
-            </label>
-            <button class="search-button" type="submit">Search</button>
-          </form>
-          <div class="prompt-row" aria-label="快速搜索">
-            <button class="prompt-chip" type="button" data-query="视频生成">视频生成</button>
-            <button class="prompt-chip" type="button" data-query="代码">代码</button>
-            <button class="prompt-chip" type="button" data-query="SEO">SEO</button>
-            <button class="prompt-chip" type="button" data-query="PPT">PPT</button>
-            <button class="prompt-chip" type="button" data-query="图片">图片</button>
+          <p class="hero-lead" id="heroLead">正在加载工具数据…</p>
+          <div class="hero-search-zone">
+            <form class="search-panel" role="search" aria-label="搜索 AI 工具">
+              <label class="search-field" for="searchInput">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20 20-4.7-4.7m2.2-5.3a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
+                <input id="searchInput" type="search" placeholder="想找视频剪辑、写代码、SEO 的 AI…" autocomplete="off" enterkeyhint="search">
+                <button class="search-clear" id="searchClear" type="button" hidden aria-label="清除搜索">×</button>
+              </label>
+              <button class="search-button" type="submit">搜索</button>
+            </form>
+            <p class="hero-search-hint" id="heroSearchHint" aria-live="polite"></p>
+            <p class="hero-kbd-hint"><kbd>/</kbd> 聚焦搜索</p>
           </div>
-          <div class="stat-strip" aria-label="站点统计">
-            <span><strong id="toolTotal">0</strong> tools</span>
-            <span><strong id="categoryTotal">0</strong> categories</span>
-            <span><strong id="freeTotal">0</strong> free/open</span>
+          <div class="hero-secondary">
+            <div class="prompt-row" id="promptRow" aria-label="任务快捷搜索"></div>
+            <div class="hero-recent" id="heroRecent" hidden>
+              <span class="hero-recent-label">最近搜索</span>
+              <div class="hero-recent-list" id="heroRecentList"></div>
+            </div>
+            <div class="stat-strip" aria-label="站点统计">
+              <button class="stat-chip" type="button" data-stat-action="directory">
+                <strong id="toolTotal">0</strong><span>个工具</span>
+              </button>
+              <button class="stat-chip" type="button" data-stat-action="categories">
+                <strong id="categoryTotal">0</strong><span>个分类</span>
+              </button>
+              <button class="stat-chip" type="button" data-stat-action="free">
+                <strong id="freeTotal">0</strong><span>免费/开源</span>
+              </button>
+            </div>
+          </div>
+          <div class="hero-cta-row">
+            <a class="hero-cta" href="#directory">直接浏览工具 →</a>
+            <a class="hero-cta hero-cta--muted" href="#rankings">全球访问榜 Top 50 →</a>
           </div>
         </div>
       </section>
 
       <section class="category-strip" id="categories" aria-labelledby="quickTitle">
         <div class="section-heading">
-          <p class="eyebrow">Browse by category</p>
+          <p class="eyebrow">按分类浏览</p>
           <h2 id="quickTitle">热门 AI 分类</h2>
         </div>
-        <div class="quick-grid" id="quickGrid"></div>
+        <div class="category-carousel" id="categoryCarousel" tabindex="0">
+          <button class="category-nav category-nav--prev" id="categoryScrollPrev" type="button" aria-label="向左滚动分类" hidden>‹</button>
+          <div class="category-carousel-viewport" id="categoryCarouselViewport">
+            <div class="quick-grid" id="quickGrid" role="list" aria-label="热门 AI 分类"></div>
+          </div>
+          <button class="category-nav category-nav--next" id="categoryScrollNext" type="button" aria-label="向右滚动分类" hidden>›</button>
+          <div class="category-carousel-footer">
+            <div class="category-dots" id="categoryDots" aria-hidden="true"></div>
+            <button class="category-expand-toggle" id="categoryExpandToggle" type="button" aria-expanded="false">展开全部分类</button>
+          </div>
+        </div>
       </section>
 
       <section class="directory-shell" id="directory" aria-label="AI 工具目录">
-        <aside class="category-rail" aria-label="分类筛选">
-          <div class="rail-title">
-            <span>Categories</span>
-            <button id="clearFilters" type="button">Reset</button>
+        <aside class="category-rail category-rail--studio" aria-label="分类筛选">
+          <div class="category-rail-tools">
+            <label class="category-search">
+              <span class="visually-hidden">搜索分类</span>
+              <input id="categorySearch" type="search" placeholder="搜索分类…" autocomplete="off" enterkeyhint="search">
+            </label>
           </div>
           <div class="category-list" id="categoryList"></div>
         </aside>
 
         <section class="results-panel">
           <div class="toolbar">
-            <div>
-              <p class="eyebrow">Search results</p>
-              <h2 id="resultTitle">全部 AI 工具</h2>
-              <p id="resultMeta" class="result-meta">正在加载...</p>
-            </div>
-            <div class="toolbar-actions">
-              <div class="segmented" aria-label="价格筛选">
-                <button class="active" type="button" data-price="all">全部</button>
-                <button type="button" data-price="free">免费</button>
-                <button type="button" data-price="freemium">免费增值</button>
-                <button type="button" data-price="paid">付费</button>
+            <div class="toolbar-main">
+              <div>
+                <p class="eyebrow">工具列表</p>
+                <h2 id="resultTitle">全部 AI 工具</h2>
+                <p id="resultMeta" class="result-meta">正在加载...</p>
               </div>
-              <button class="new-filter-button" id="newOnlyToggle" type="button" aria-pressed="false">新增收录</button>
-              <label class="select-label">
-                <span>Sort</span>
-                <select id="sortSelect">
-                  <option value="featured">Featured</option>
-                  <option value="name">Name A-Z</option>
-                  <option value="category">Category</option>
-                </select>
-              </label>
+              <div class="toolbar-actions">
+                <div class="view-toggle" id="viewToggle" aria-label="列表视图">
+                  <button type="button" data-view="grid" class="active" aria-pressed="true">卡片</button>
+                  <button type="button" data-view="compact" aria-pressed="false">紧凑</button>
+                </div>
+                <div class="segmented" aria-label="价格筛选">
+                  <button class="active" type="button" data-price="all">全部</button>
+                  <button type="button" data-price="free">免费</button>
+                  <button type="button" data-price="freemium">免费增值</button>
+                  <button type="button" data-price="paid">付费</button>
+                </div>
+                <button class="new-filter-button" id="newOnlyToggle" type="button" aria-pressed="false">新增收录</button>
+                <label class="select-label">
+                  <span>排序</span>
+                  <select id="sortSelect">
+                    <option value="featured">精选优先</option>
+                    <option value="newest">最新收录</option>
+                    <option value="name">名称 A→Z</option>
+                    <option value="category">按分类</option>
+                  </select>
+                </label>
+              </div>
             </div>
+            <div class="active-tags" id="activeTags" aria-live="polite"></div>
           </div>
-
-          <div class="active-tags" id="activeTags" aria-live="polite"></div>
           <div class="tool-grid" id="toolGrid"></div>
+          <div class="tool-list-footer" id="toolListFooter" hidden>
+            <p class="tool-list-meta" id="toolListMeta"></p>
+            <button class="tool-load-more" id="toolLoadMore" type="button" hidden>加载更多</button>
+          </div>
           <div class="empty-state" id="emptyState" hidden>
             <div class="empty-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
@@ -126,40 +177,488 @@
           </div>
         </section>
 
-        <aside class="insight-rail" id="rankings" aria-label="AI 工具榜单">
-          <section class="side-panel">
-            <div class="side-title">
-              <span>Trending</span>
-              <strong>热门工具</strong>
-            </div>
-            <div class="mini-list" id="trendingList"></div>
-          </section>
-          <section class="side-panel">
-            <div class="side-title">
-              <span>New</span>
-              <strong>最新收录</strong>
-            </div>
-            <div class="mini-list" id="newList"></div>
-          </section>
-          <section class="side-panel">
-            <div class="side-title">
-              <span>Tags</span>
-              <strong>高频标签</strong>
-            </div>
-            <div class="tag-cloud" id="tagCloud"></div>
-          </section>
+        <aside class="insight-rail" id="insightRail" aria-label="站点推荐">
+          <div class="insight-rail-inner">
+            <section class="insight-section">
+              <div class="side-title">
+                <div class="side-title-text">
+                  <strong>热门工具</strong>
+                  <span>精选推荐</span>
+                </div>
+                <button class="insight-view-all" type="button" data-insight-action="featured">查看全部</button>
+              </div>
+              <div class="mini-list" id="trendingList"></div>
+            </section>
+            <section class="insight-section">
+              <div class="side-title">
+                <div class="side-title-text">
+                  <strong>最新收录</strong>
+                  <span>本次扩容新增</span>
+                </div>
+                <button class="insight-view-all" type="button" data-insight-action="new">查看全部</button>
+              </div>
+              <div class="mini-list" id="newList"></div>
+            </section>
+            <section class="insight-section">
+              <div class="side-title">
+                <div class="side-title-text">
+                  <strong>高频标签</strong>
+                  <span>按收录词频</span>
+                </div>
+                <button class="insight-view-all" type="button" data-insight-action="tags">清除标签</button>
+              </div>
+              <div class="tag-cloud" id="tagCloud"></div>
+            </section>
+          </div>
         </aside>
       </section>
-    </main>
+      </div>
 
-    <footer class="site-footer">
-      <span>AI 导航星图</span>
-      <a href="#top">返回顶部</a>
-    </footer>
+      <section class="rankings-page app-view" id="rankings" hidden aria-labelledby="rankingsTitle">
+        <div class="rankings-shell">
+          <header class="rankings-hero">
+            <p class="eyebrow" id="rankingsEyebrow">Similarweb · 2026年4月</p>
+            <h1 id="rankingsTitle">全球 AI 工具访问排行榜 Top 50</h1>
+            <p class="rankings-lead" id="rankingsLead">口径：Similarweb 全球 AI Chatbots and Tools 类别访问排名</p>
+            <p class="rankings-note">数据为第三方流量估算，仅供参考；与本站收录无官方关联。</p>
+          </header>
+          <div class="rankings-table-wrap">
+            <table class="rankings-table">
+              <caption class="visually-hidden">全球 AI 工具访问 Top 50</caption>
+              <thead>
+                <tr>
+                  <th scope="col">排名</th>
+                  <th scope="col">AI 工具 / 网站</th>
+                  <th scope="col">主要用途</th>
+                  <th scope="col">月度名次变化</th>
+                  <th scope="col">平均访问时长</th>
+                </tr>
+              </thead>
+              <tbody id="rankingsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="lab-page app-view" id="lab" hidden aria-labelledby="labTitle">
+        <div class="lab-shell lab-shell--fullscreen">
+          <h1 id="labTitle" class="visually-hidden">试验场</h1>
+          <div class="lab-layout lab-layout--studio lab-workspace">
+            <div class="lab-studio lab-studio--cherry" aria-label="模型平台管理">
+              <aside class="lab-studio-rail" aria-label="模型平台">
+                <div class="lab-studio-search-wrap">
+                  <input class="lab-studio-search" id="labProviderSearch" type="search" placeholder="搜索模型平台…" autocomplete="off" aria-label="搜索模型平台">
+                </div>
+                <div class="lab-studio-list" id="labProviderList" role="listbox" aria-label="模型平台列表"></div>
+                <button type="button" class="lab-studio-add" id="labAddProvider">
+                  <span aria-hidden="true">+</span> 自定义
+                </button>
+              </aside>
+              <div class="lab-studio-main">
+                <header class="lab-studio-head">
+                  <div class="lab-studio-head-brand" id="labStudioHead"></div>
+                  <label class="lab-switch lab-studio-head-switch" title="启用此平台">
+                    <input type="checkbox" id="labProviderEnabled">
+                    <span class="lab-switch-track" aria-hidden="true"></span>
+                  </label>
+                  <div class="lab-studio-head-actions" id="labStudioHeadTools">
+                    <button type="button" class="lab-studio-status lab-studio-status--head" id="labStatus" hidden aria-live="polite"></button>
+                    <button type="button" class="lab-studio-ghost-btn" id="labSaveProvider" hidden title="保存当前平台配置">保存</button>
+                    <button type="button" class="lab-studio-ghost-btn" id="labEditProvider" hidden title="聚焦平台名称">编辑</button>
+                    <button type="button" class="lab-studio-ghost-btn lab-studio-ghost-btn--danger" id="labDeleteProvider" hidden title="删除自定义平台">删除</button>
+                  </div>
+                </header>
+                <div class="lab-studio-body">
+                  <div class="lab-studio-custom-meta" id="labCustomNameField" hidden>
+                    <label class="lab-studio-label" for="labCustomProviderName">平台名称</label>
+                    <input class="lab-studio-api-url-input lab-studio-custom-name-input" id="labCustomProviderName" type="text" placeholder="例如：本地 Ollama" autocomplete="off" spellcheck="false" disabled>
+                  </div>
+                  <div class="lab-studio-api-grid" id="labStudioApiGrid">
+                    <div class="lab-studio-field lab-studio-field--api">
+                      <label class="lab-studio-label" for="labApiKey">API 密钥</label>
+                      <div class="lab-studio-api-control">
+                        <div class="lab-studio-input-affix">
+                          <input id="labApiKey" type="password" name="neux-lab-api-secret" placeholder="sk-…" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-form-type="other" title="多个密钥用英文逗号分隔，仅存本机；仅在你主动输入后才会保存">
+                          <button type="button" class="lab-studio-input-affix-btn" id="labToggleKey" title="显示密钥" aria-label="显示密钥" aria-pressed="false">
+                            <svg class="lab-key-icon lab-key-icon--show" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+                            <svg class="lab-key-icon lab-key-icon--hide" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.09 11.35 7 12 7zM2 4.27 3.27 3 21 20.73 19.73 22l-2.46-2.46A10.9 10.9 0 0 1 12 19.5C7 19.5 2.73 16.39 1 12a11.8 11.8 0 0 1 4.05-5.36L2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55A5.02 5.02 0 0 1 7 12c0-.79.2-1.53.53-2.2zm4.31-.78 3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+                          </button>
+                        </div>
+                        <button type="button" class="lab-studio-pill-btn lab-studio-api-test" id="labTestConnection">检测</button>
+                      </div>
+                      <span class="lab-studio-field-meta" aria-hidden="true"></span>
+                    </div>
+                    <div class="lab-studio-field lab-studio-field--api">
+                      <label class="lab-studio-label" for="labBaseUrl">API 地址</label>
+                      <div class="lab-studio-api-control">
+                        <input class="lab-studio-api-url-input" id="labBaseUrl" type="url" placeholder="https://api.openai.com/v1" autocomplete="off" spellcheck="false">
+                      </div>
+                      <small class="lab-studio-preview lab-studio-field-meta" id="labApiPreview">预览: —</small>
+                    </div>
+                  </div>
+                  <section class="lab-studio-models" aria-label="模型列表">
+                    <div class="lab-studio-models-toolbar">
+                      <div class="lab-studio-models-head">
+                        <span class="lab-studio-label">模型</span>
+                        <div class="lab-studio-models-actions">
+                          <button type="button" class="lab-studio-ghost-btn" id="labFetchModels">拉取</button>
+                          <button type="button" class="lab-studio-ghost-btn" id="labClearModelCache" title="清空当前平台的模型列表缓存">清空列表</button>
+                        </div>
+                      </div>
+                      <input class="lab-studio-search lab-studio-search--dense lab-studio-search--models" id="labModelSearch" type="search" placeholder="搜模型…" autocomplete="off" aria-label="搜索模型">
+                    </div>
+                    <div class="lab-studio-enabled-wrap" id="labEnabledWrap" hidden>
+                      <div class="lab-studio-enabled" id="labEnabledModels"></div>
+                    </div>
+                    <div class="lab-studio-model-list" id="labFetchedModels"></div>
+                  </section>
+                  <section class="lab-studio-more" id="labStudioMore">
+                    <div class="lab-studio-more-foot">
+                      <button type="button" class="lab-studio-more-label" id="labStudioMoreExpand" aria-expanded="true" aria-controls="labStudioMorePanel">
+                        <span>更多设置</span>
+                      </button>
+                      <button type="button" class="lab-studio-more-collapse" id="labStudioMoreCollapse" aria-expanded="true" aria-controls="labStudioMorePanel" title="收起更多设置">
+                        <span class="lab-studio-more-collapse-text">收起</span>
+                        <svg class="lab-studio-more-chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8.12 9.29 12 13.17l3.88-3.88a1 1 0 1 1 1.42 1.42l-4.59 4.59a1 1 0 0 1-1.42 0L6.7 10.71a1 1 0 0 1 1.42-1.42z"/></svg>
+                      </button>
+                    </div>
+                    <div class="lab-studio-more-panel" id="labStudioMorePanel">
+                    <div class="lab-studio-more-body">
+                      <details class="lab-studio-cors">
+                        <summary>CORS 与代理说明</summary>
+                        <div class="lab-studio-cors-body">
+                          <p>浏览器直连第三方 API 常被 CORS 拦截。可尝试本地 Ollama、自建反代，或将反代地址填入 API 地址。</p>
+                        </div>
+                      </details>
+                      <div class="lab-studio-data-actions">
+                        <button type="button" class="lab-studio-ghost-btn" id="labExportConfig">导出</button>
+                        <button type="button" class="lab-studio-ghost-btn" id="labImportConfig">导入</button>
+                        <button type="button" class="lab-studio-ghost-btn lab-studio-ghost-btn--danger" id="labClearAllData">清除数据</button>
+                        <input type="file" id="labImportFile" accept="application/json,.json" hidden>
+                      </div>
+                      <details class="lab-studio-advanced" open>
+                        <summary>高级参数</summary>
+                        <div class="lab-studio-advanced-grid">
+                          <label class="lab-studio-field lab-studio-field--span">
+                            <span class="lab-studio-label">系统提示词</span>
+                            <textarea id="labSystemPrompt" rows="2" placeholder="You are a helpful assistant."></textarea>
+                          </label>
+                          <label class="lab-studio-field lab-studio-field--range">
+                            <span class="lab-studio-label">温度 <strong id="labTempValue">0.7</strong></span>
+                            <input id="labTemperature" type="range" min="0" max="2" step="0.1" value="0.7">
+                          </label>
+                          <label class="lab-studio-field">
+                            <span class="lab-studio-label">最大 Tokens</span>
+                            <input id="labMaxTokens" type="number" min="256" max="128000" step="256" value="2048">
+                          </label>
+                          <label class="lab-studio-check">
+                            <input id="labStream" type="checkbox" checked>
+                            <span>流式</span>
+                          </label>
+                        </div>
+                      </details>
+                    </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+            <section class="lab-panel lab-panel--chat" aria-label="对话测试">
+              <div class="lab-chat-layout" id="labChatLayout">
+                <aside class="lab-chat-sessions" id="labChatSessions" aria-label="对话列表">
+                  <div class="lab-chat-sessions-pane" id="labChatSessionsPane">
+                  <div class="lab-chat-sessions-head">
+                    <nav class="lab-chat-sessions-actions" aria-label="对话操作">
+                      <button type="button" class="lab-chat-sessions-action lab-chat-sessions-mode-btn is-active" id="labSidebarModeChat" aria-expanded="true" aria-controls="labSidebarChatMenu">
+                        <svg class="lab-chat-sessions-action-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5H12l-4.6 4.1a.8.8 0 0 1-1.4-.6V15H6.5A2.5 2.5 0 0 1 4 12.5v-7Zm2.5-.9a.9.9 0 0 0-.9.9v7c0 .5.4.9.9.9H8a.8.8 0 0 1 .8.8v2.6l3.5-3.1c.15-.13.34-.2.54-.2h4.7a.9.9 0 0 0 .9-.9v-7a.9.9 0 0 0-.9-.9h-11Z"/></svg>
+                        <span>对话模式</span>
+                      </button>
+                      <div class="lab-chat-sessions-submenu" id="labSidebarChatMenu">
+                        <button type="button" class="lab-chat-sessions-action" id="labNewSession">
+                          <svg class="lab-chat-sessions-action-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M5 5h9.5a2.5 2.5 0 0 1 2.45 2h2.05A2.5 2.5 0 0 1 21 9.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm0 2v12h14V9.5H16V7H5Zm12.75 1.5 1.5 1.5H16V8.5h1.75Z"/></svg>
+                          <span>新聊天</span>
+                        </button>
+                        <div class="lab-chat-sessions-search-slot">
+                          <button type="button" class="lab-chat-sessions-action" id="labSessionSearchToggle" aria-expanded="false" aria-controls="labSessionSearchField">
+                            <svg class="lab-chat-sessions-action-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10.5 4a6.5 6.5 0 0 1 5.18 10.52l3.56 3.56-1.06 1.06-3.56-3.56A6.5 6.5 0 1 1 10.5 4Zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z"/></svg>
+                            <span>搜索聊天</span>
+                          </button>
+                          <div class="lab-chat-sessions-search-field" id="labSessionSearchField" hidden>
+                            <svg class="lab-chat-sessions-action-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10.5 4a6.5 6.5 0 0 1 5.18 10.52l3.56 3.56-1.06 1.06-3.56-3.56A6.5 6.5 0 1 1 10.5 4Zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z"/></svg>
+                            <input class="lab-chat-sessions-search-input" id="labSessionSearch" type="search" placeholder="搜索对话…" autocomplete="off" aria-label="搜索对话">
+                            <button type="button" class="lab-chat-sessions-search-close" id="labSessionSearchClose" aria-label="关闭搜索" title="关闭">×</button>
+                          </div>
+                        </div>
+                      </div>
+                      <button type="button" class="lab-chat-sessions-action lab-chat-sessions-mode-btn" id="labSidebarModeAgent" aria-expanded="false" aria-controls="labSidebarAgentMenu">
+                        <svg class="lab-chat-sessions-action-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a2 2 0 0 1 2 2v1.1a6.2 6.2 0 0 1 3.9 3.9H19a2 2 0 1 1 0 4h-1.1a6.2 6.2 0 0 1-3.9 3.9V19a2 2 0 1 1-4 0v-1.1a6.2 6.2 0 0 1-3.9-3.9H5a2 2 0 1 1 0-4h1.1a6.2 6.2 0 0 1 3.9-3.9V5a2 2 0 0 1 2-2Zm0 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg>
+                        <span>Agent模式</span>
+                      </button>
+                      <div class="lab-chat-sessions-submenu" id="labSidebarAgentMenu" hidden>
+                        <p class="lab-chat-sessions-submenu-note">Agent 功能入口（后续会放在这里）。</p>
+                      </div>
+                    </nav>
+                  </div>
+                  <div class="lab-chat-sessions-submenu" id="labSidebarChatListMenu">
+                    <p class="lab-chat-session-notice" id="labSessionNotice" hidden aria-live="polite"></p>
+                    <ul class="lab-chat-session-list" id="labSessionList" role="listbox" aria-label="全部对话"></ul>
+                  </div>
+                  </div>
+                  <footer class="lab-chat-sessions-foot">
+                    <button type="button" class="lab-chat-sessions-collapse" id="labSessionsCollapse" aria-expanded="true" aria-controls="labChatSessionsPane" title="收起对话列表">
+                      <span class="lab-chat-sessions-collapse-text">收起</span>
+                      <svg class="lab-chat-sessions-collapse-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M14.71 8.71 10.41 12l4.3 4.29a1 1 0 0 1-1.42 1.42l-5-5a1 1 0 0 1 0-1.42l5-5a1 1 0 1 1 1.42 1.42z"/></svg>
+                    </button>
+                  </footer>
+                </aside>
+                <button type="button" class="lab-chat-sessions-reveal" id="labSessionsExpand" hidden title="展开对话列表" aria-label="展开对话列表" aria-controls="labChatSessionsPane">
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M9.29 8.71 13.59 12l-4.3 4.29a1 1 0 0 0 1.42 1.42l5-5a1 1 0 0 0 0-1.42l-5-5a1 1 0 0 0-1.42 1.42z"/></svg>
+                  <span>对话</span>
+                </button>
+                <div class="lab-chat-main">
+              <header class="lab-chat-toolbar" id="labChatToolbar">
+                <div class="lab-chat-mode-switch" role="group" aria-label="对话模式">
+                  <button
+                    type="button"
+                    class="lab-chat-mode-btn"
+                    id="labNormalMode"
+                    data-chat-mode="normal"
+                    aria-pressed="true"
+                    title="单模型对话"
+                  >普通模式</button>
+                  <button
+                    type="button"
+                    class="lab-chat-mode-btn"
+                    id="labBattleMode"
+                    data-chat-mode="battle"
+                    aria-pressed="false"
+                    title="并排对比多个模型"
+                  >对战模式</button>
+                  <button
+                    type="button"
+                    class="lab-chat-mode-btn"
+                    id="labVoiceMode"
+                    data-chat-mode="voice"
+                    aria-pressed="false"
+                    title="语音对话模式"
+                  >语音模式</button>
+                </div>
+                <div class="lab-chat-toolbar-spacer" aria-hidden="true"></div>
+                <div class="lab-chat-model-picks">
+                  <div class="lab-chat-model-pick lab-chat-model-pick--primary" id="labChatModelPick">
+                    <div class="lab-chat-model-menu" id="labChatModelMenu" data-chat-model-slot="primary">
+                      <button
+                        type="button"
+                        class="lab-chat-model-trigger"
+                        id="labChatModelTrigger"
+                        disabled
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-controls="labChatModelPanel"
+                        aria-label="选择对话模型"
+                      >
+                        <span class="lab-chat-model-trigger-copy">
+                          <span class="lab-chat-model-trigger-platform" id="labChatModelPlatform" hidden></span>
+                          <span class="lab-chat-model-trigger-model" id="labChatModelTriggerText">请先在各平台启用模型</span>
+                        </span>
+                        <svg class="lab-chat-model-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8.12 9.29 12 13.17l3.88-3.88a1 1 0 1 1 1.42 1.42l-4.59 4.59a1 1 0 0 1-1.42 0L6.7 10.71a1 1 0 0 1 1.42-1.42z"/></svg>
+                      </button>
+                      <div class="lab-chat-model-panel" id="labChatModelPanel" role="listbox" hidden>
+                        <div class="lab-chat-model-panel-scroll" id="labChatModelList"></div>
+                      </div>
+                      <select id="labChatModel" hidden tabindex="-1" aria-hidden="true">
+                        <option value="">请先在各平台启用模型</option>
+                      </select>
+                    </div>
+                  </div>
+                  <span class="lab-chat-model-vs" id="labChatBattleModelVs" hidden aria-hidden="true">VS</span>
+                  <div class="lab-chat-model-pick lab-chat-model-pick--battle" id="labChatBattleModelPick" hidden>
+                    <div class="lab-chat-model-menu" id="labChatBattleModelMenu" data-chat-model-slot="battle">
+                      <button
+                        type="button"
+                        class="lab-chat-model-trigger"
+                        id="labChatBattleModelTrigger"
+                        disabled
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-controls="labChatBattleModelPanel"
+                        aria-label="选择对战模型"
+                      >
+                        <span class="lab-chat-model-trigger-copy">
+                          <span class="lab-chat-model-trigger-platform" id="labChatBattleModelPlatform" hidden></span>
+                          <span class="lab-chat-model-trigger-model" id="labChatBattleModelTriggerText">请先在各平台启用模型</span>
+                        </span>
+                        <svg class="lab-chat-model-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8.12 9.29 12 13.17l3.88-3.88a1 1 0 1 1 1.42 1.42l-4.59 4.59a1 1 0 0 1-1.42 0L6.7 10.71a1 1 0 0 1 1.42-1.42z"/></svg>
+                      </button>
+                      <div class="lab-chat-model-panel" id="labChatBattleModelPanel" role="listbox" hidden>
+                        <div class="lab-chat-model-panel-scroll" id="labChatBattleModelList"></div>
+                      </div>
+                      <select id="labChatBattleModel" hidden tabindex="-1" aria-hidden="true">
+                        <option value="">请先在各平台启用模型</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="lab-chat-toolbar-end">
+                  <button type="button" class="lab-btn lab-btn--ghost" id="labExportChat" title="导出 Markdown">导出</button>
+                  <button type="button" class="lab-btn lab-btn--ghost" id="labClearChat" title="清空当前对话">清空</button>
+                </div>
+              </header>
+              <section class="lab-voice-mode-panel" id="labVoiceModePanel" hidden aria-label="语音模式设置">
+                <div class="lab-voice-mode-row">
+                  <label class="lab-voice-mode-label" for="labVoiceModelTrigger">语音模型 (TTS)</label>
+                  <div class="lab-voice-picker">
+                    <div class="lab-chat-model-menu lab-voice-picker-menu" id="labVoiceModelMenu" data-voice-picker="model">
+                      <button
+                        type="button"
+                        class="lab-chat-model-trigger lab-voice-picker-trigger"
+                        id="labVoiceModelTrigger"
+                        disabled
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-controls="labVoiceModelPanel"
+                        aria-label="选择 TTS 语音模型"
+                      >
+                        <span class="lab-chat-model-trigger-copy">
+                          <span class="lab-chat-model-trigger-model" id="labVoiceModelTriggerText">请先启用 TTS 模型</span>
+                        </span>
+                        <svg class="lab-chat-model-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8.12 9.29 12 13.17l3.88-3.88a1 1 0 1 1 1.42 1.42l-4.59 4.59a1 1 0 0 1-1.42 0L6.7 10.71a1 1 0 0 1 1.42-1.42z"/></svg>
+                      </button>
+                      <div class="lab-chat-model-panel" id="labVoiceModelPanel" role="listbox" hidden>
+                        <div class="lab-chat-model-panel-scroll" id="labVoiceModelList"></div>
+                      </div>
+                      <select id="labVoiceModeModel" hidden tabindex="-1" aria-hidden="true">
+                        <option value="">请先启用 TTS 模型</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="lab-btn lab-btn--ghost lab-voice-mode-stop"
+                    id="labVoiceModeStop"
+                    aria-pressed="false"
+                    title="停止当前语音播放"
+                  >
+                    停止语音
+                  </button>
+                  <p class="lab-voice-mode-notice" id="labVoiceModeNotice" hidden aria-live="polite"></p>
+                </div>
+                <div class="lab-voice-mode-row lab-voice-tts-opts" id="labVoiceTtsOpts" hidden>
+                  <label class="lab-voice-mode-label" for="labVoiceTtsVoiceTrigger">音色</label>
+                  <div class="lab-voice-picker">
+                    <div class="lab-chat-model-menu lab-voice-picker-menu" id="labVoiceTtsVoiceMenu" data-voice-picker="voice">
+                      <button
+                        type="button"
+                        class="lab-chat-model-trigger lab-voice-picker-trigger"
+                        id="labVoiceTtsVoiceTrigger"
+                        disabled
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-controls="labVoiceTtsVoicePanel"
+                        aria-label="TTS 音色"
+                      >
+                        <span class="lab-chat-model-trigger-copy">
+                          <span class="lab-chat-model-trigger-model" id="labVoiceTtsVoiceTriggerText">—</span>
+                        </span>
+                        <svg class="lab-chat-model-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8.12 9.29 12 13.17l3.88-3.88a1 1 0 1 1 1.42 1.42l-4.59 4.59a1 1 0 0 1-1.42 0L6.7 10.71a1 1 0 0 1 1.42-1.42z"/></svg>
+                      </button>
+                      <div class="lab-chat-model-panel" id="labVoiceTtsVoicePanel" role="listbox" hidden>
+                        <div class="lab-chat-model-panel-scroll" id="labVoiceTtsVoiceList"></div>
+                      </div>
+                      <select id="labVoiceTtsVoice" hidden tabindex="-1" aria-hidden="true"></select>
+                    </div>
+                  </div>
+                  <label class="lab-voice-mode-label" for="labVoiceTtsStyleTrigger">风格</label>
+                  <div class="lab-voice-picker">
+                    <div class="lab-chat-model-menu lab-voice-picker-menu" id="labVoiceTtsStyleMenu" data-voice-picker="style">
+                      <button
+                        type="button"
+                        class="lab-chat-model-trigger lab-voice-picker-trigger"
+                        id="labVoiceTtsStyleTrigger"
+                        disabled
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-controls="labVoiceTtsStylePanel"
+                        aria-label="TTS 风格预设"
+                      >
+                        <span class="lab-chat-model-trigger-copy">
+                          <span class="lab-chat-model-trigger-model" id="labVoiceTtsStyleTriggerText">自然朗读</span>
+                        </span>
+                        <svg class="lab-chat-model-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8.12 9.29 12 13.17l3.88-3.88a1 1 0 1 1 1.42 1.42l-4.59 4.59a1 1 0 0 1-1.42 0L6.7 10.71a1 1 0 0 1 1.42-1.42z"/></svg>
+                      </button>
+                      <div class="lab-chat-model-panel" id="labVoiceTtsStylePanel" role="listbox" hidden>
+                        <div class="lab-chat-model-panel-scroll" id="labVoiceTtsStyleList"></div>
+                      </div>
+                      <select id="labVoiceTtsStylePreset" hidden tabindex="-1" aria-hidden="true"></select>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    id="labVoiceTtsStyle"
+                    class="lab-voice-mode-style-input"
+                    placeholder="自定义风格（自然语言描述）"
+                    aria-label="TTS 自定义风格"
+                    hidden
+                  />
+                </div>
+                <p class="lab-voice-mode-hint" id="labVoiceModeHint">上方下拉框选择文本模型生成回复；此处仅列出 TTS 模型用于语音播报。</p>
+              </section>
+              <div class="lab-chat-stage" id="labChatStage">
+                <div class="lab-chat-stage-main">
+                  <div class="lab-chat-messages" id="labChatMessages"></div>
+                  <p class="lab-usage" id="labUsage" aria-live="polite"></p>
+                </div>
+              </div>
+              <form class="lab-chat-composer" id="labChatForm">
+                <div class="lab-composer-box">
+                  <textarea id="labChatInput" rows="2" placeholder="输入消息…" required></textarea>
+                  <footer class="lab-composer-foot">
+                    <div class="lab-composer-btns">
+                      <button type="button" class="lab-btn lab-btn--ghost" id="labStop" hidden>停止</button>
+                      <button type="submit" class="lab-btn lab-btn--primary" id="labSend">发送</button>
+                    </div>
+                  </footer>
+                </div>
+              </form>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
     </div>
 
-    <script src="ambient-bg.js?v=700" defer></script>
-    <script src="assets/logos/manifest.js?v=700"></script>
-    <script src="script.js?v=700" defer></script>
+    <aside class="action-dock" id="actionDock" aria-label="快捷操作">
+      <button class="dock-btn dock-btn--fav" id="favoriteToggle" type="button" aria-pressed="false" title="只看收藏">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 17.3-5.3 3 1.4-5.9-4.6-4 6-.5L12 4.4l2.4 5.5 6 .5-4.6 4 1.4 5.9z"/></svg>
+        <span>收藏</span>
+      </button>
+      <div class="dock-compare" id="compareBar">
+        <span class="dock-compare-meta" id="compareMeta">已选 0 / 3</span>
+        <button type="button" id="compareOpen">对比</button>
+        <button type="button" id="compareClear">清空</button>
+      </div>
+      <button class="dock-btn dock-btn--reset" id="clearFilters" type="button" hidden title="重置全部筛选">清空筛选</button>
+      <button class="dock-btn dock-btn--top" id="backToTop" type="button" hidden aria-label="回到顶部" title="回到顶部">
+        <span aria-hidden="true">↑</span>
+        <span>顶部</span>
+      </button>
+    </aside>
+
+    <dialog class="compare-dialog" id="compareDialog" aria-labelledby="compareDialogTitle">
+      <div class="compare-dialog-head">
+        <h2 id="compareDialogTitle">工具对比</h2>
+        <button type="button" id="compareClose" aria-label="关闭对比">×</button>
+      </div>
+      <div class="compare-panel" id="comparePanel"></div>
+    </dialog>
+
+    <script src="ambient-bg.js?v=704" defer></script>
+    <script src="assets/logos/manifest.js?v=701" defer></script>
+    <script src="lab-markdown.js?v=1" defer></script>
+    <script src="lab-tts.js?v=4" defer></script>
+    <script src="lab.js?v=92" defer></script>
+    <script src="script.js?v=719" defer></script>
   </body>
 </html>

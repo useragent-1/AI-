@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://useragent-1.github.io/AI-/sitemap.xml

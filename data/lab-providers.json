@@ -1,0 +1,1247 @@
+{
+  "version": 9,
+  "groups": [
+    {
+      "id": "intl",
+      "label": "国际云服务"
+    },
+    {
+      "id": "china",
+      "label": "国内模型官网"
+    },
+    {
+      "id": "agg",
+      "label": "聚合与推理"
+    },
+    {
+      "id": "relay",
+      "label": "中转与套餐"
+    },
+    {
+      "id": "local",
+      "label": "本地部署"
+    },
+    {
+      "id": "other",
+      "label": "其他"
+    },
+    {
+      "id": "custom",
+      "label": "自定义"
+    }
+  ],
+  "providers": [
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "group": "intl",
+      "baseUrl": "https://api.openai.com/v1",
+      "logo": "assets/logos/lab-openai.png",
+      "iconDomain": "openai.com",
+      "brandColor": "#10a37f",
+      "note": "官方 GPT / o 系列；TTS 走 /audio/speech",
+      "ttsAdapter": "openai-speech",
+      "tags": [
+        "官方"
+      ]
+    },
+    {
+      "id": "elevenlabs",
+      "name": "ElevenLabs",
+      "group": "intl",
+      "baseUrl": "https://api.elevenlabs.io/v1",
+      "iconDomain": "elevenlabs.io",
+      "brandColor": "#000000",
+      "note": "高质量英文 TTS；API Key 填 xi-api-key",
+      "ttsAdapter": "elevenlabs",
+      "tags": [
+        "官方",
+        "语音"
+      ]
+    },
+    {
+      "id": "azure-openai",
+      "name": "Azure OpenAI",
+      "group": "intl",
+      "baseUrl": "https://YOUR-RESOURCE.openai.azure.com/openai/deployments/YOUR-DEPLOYMENT",
+      "logo": "assets/logos/lab-azure-openai.ico",
+      "iconDomain": "azure.com",
+      "brandColor": "#0078d4",
+      "note": "替换资源名与部署名",
+      "tags": [
+        "企业"
+      ]
+    },
+    {
+      "id": "google-gemini",
+      "name": "Google Gemini 官网",
+      "group": "intl",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "logo": "assets/logos/lab-google-gemini.png",
+      "iconDomain": "google.com",
+      "brandColor": "#4285f4",
+      "note": "OpenAI 兼容模式",
+      "tags": [
+        "官方",
+        "多模态"
+      ]
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral 官网",
+      "group": "intl",
+      "baseUrl": "https://api.mistral.ai/v1",
+      "logo": "assets/logos/lab-mistral.png",
+      "iconDomain": "mistral.ai",
+      "brandColor": "#fa520a",
+      "note": "Mistral / Pixtral",
+      "tags": [
+        "官方",
+        "欧洲"
+      ]
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "group": "intl",
+      "baseUrl": "https://api.groq.com/openai/v1",
+      "logo": "assets/logos/lab-groq.ico",
+      "iconDomain": "groq.com",
+      "brandColor": "#f55036",
+      "note": "超低延迟推理",
+      "tags": [
+        "免费层"
+      ]
+    },
+    {
+      "id": "together",
+      "name": "Together AI",
+      "group": "intl",
+      "baseUrl": "https://api.together.xyz/v1",
+      "logo": "assets/logos/lab-together.png",
+      "iconDomain": "together.ai",
+      "brandColor": "#0b57d0",
+      "note": "开源模型托管",
+      "tags": [
+        "开源"
+      ]
+    },
+    {
+      "id": "fireworks",
+      "name": "Fireworks AI",
+      "group": "intl",
+      "baseUrl": "https://api.fireworks.ai/inference/v1",
+      "iconDomain": "fireworks.ai",
+      "brandColor": "#5b21b6",
+      "note": "高速推理平台",
+      "tags": [
+        "推理"
+      ],
+      "logo": "assets/logos/lab-fireworks.png"
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek 官网",
+      "group": "china",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "logo": "assets/logos/lab-deepseek.png",
+      "iconDomain": "deepseek.com",
+      "brandColor": "#4d6bfe",
+      "note": "深度推理与编程",
+      "tags": [
+        "官方",
+        "国内",
+        "热门"
+      ]
+    },
+    {
+      "id": "xai",
+      "name": "xAI",
+      "group": "intl",
+      "baseUrl": "https://api.x.ai/v1",
+      "logo": "assets/logos/lab-xai.ico",
+      "iconDomain": "x.ai",
+      "brandColor": "#0a0a0a",
+      "note": "Grok 系列",
+      "tags": []
+    },
+    {
+      "id": "perplexity",
+      "name": "Perplexity",
+      "group": "intl",
+      "baseUrl": "https://api.perplexity.ai",
+      "logo": "assets/logos/lab-perplexity.png",
+      "iconDomain": "perplexity.ai",
+      "brandColor": "#20808d",
+      "note": "搜索增强对话",
+      "tags": [
+        "搜索"
+      ]
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere",
+      "group": "intl",
+      "baseUrl": "https://api.cohere.com/v2",
+      "logo": "assets/logos/lab-cohere.png",
+      "iconDomain": "cohere.com",
+      "brandColor": "#39594d",
+      "note": "部分端点兼容 OpenAI",
+      "tags": []
+    },
+    {
+      "id": "nvidia-nim",
+      "name": "NVIDIA NIM",
+      "group": "intl",
+      "baseUrl": "https://integrate.api.nvidia.com/v1",
+      "logo": "assets/logos/lab-nvidia-nim.ico",
+      "iconDomain": "nvidia.com",
+      "brandColor": "#76b900",
+      "note": "NIM 推理服务",
+      "tags": [
+        "GPU"
+      ]
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare AI",
+      "group": "intl",
+      "baseUrl": "https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT/ai/v1",
+      "logo": "assets/logos/lab-cloudflare.png",
+      "iconDomain": "cloudflare.com",
+      "brandColor": "#f38020",
+      "note": "需替换 Account ID",
+      "tags": [
+        "边缘"
+      ]
+    },
+    {
+      "id": "ai21",
+      "name": "AI21 Labs",
+      "group": "intl",
+      "baseUrl": "https://api.ai21.com/studio/v1",
+      "logo": "assets/logos/lab-ai21.webp",
+      "iconDomain": "ai21.com",
+      "brandColor": "#6366f1",
+      "note": "Jamba 等模型",
+      "tags": []
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "group": "agg",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "logo": "assets/logos/lab-openrouter.ico",
+      "iconDomain": "openrouter.ai",
+      "brandColor": "#6566f1",
+      "note": "200+ 模型，含免费",
+      "tags": [
+        "聚合",
+        "免费"
+      ],
+      "extraHeaders": {
+        "HTTP-Referer": "{origin}",
+        "X-Title": "NEUX Lab"
+      }
+    },
+    {
+      "id": "siliconflow",
+      "name": "SiliconFlow",
+      "group": "china",
+      "baseUrl": "https://api.siliconflow.cn/v1",
+      "logo": "assets/logos/lab-siliconflow.png",
+      "iconDomain": "siliconflow.cn",
+      "brandColor": "#6c4dff",
+      "note": "国内高速，免费模型多",
+      "tags": [
+        "国内",
+        "免费"
+      ]
+    },
+    {
+      "id": "moonshot",
+      "name": "Kimi · 月之暗面",
+      "group": "china",
+      "baseUrl": "https://api.moonshot.cn/v1",
+      "logo": "assets/logos/lab-moonshot.ico",
+      "iconDomain": "moonshot.cn",
+      "brandColor": "#1a1a1a",
+      "note": "长文本中文助手",
+      "tags": [
+        "官方",
+        "国内",
+        "长文本"
+      ]
+    },
+    {
+      "id": "zhipu",
+      "name": "智谱 GLM 官网",
+      "group": "china",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "logo": "assets/logos/lab-zhipu.png",
+      "iconDomain": "zhipuai.cn",
+      "brandColor": "#2d5af1",
+      "note": "GLM 系列",
+      "tags": [
+        "官方",
+        "国内"
+      ]
+    },
+    {
+      "id": "qwen",
+      "name": "通义千问 · 百炼",
+      "group": "china",
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "logo": "assets/logos/lab-qwen.png",
+      "iconDomain": "aliyun.com",
+      "brandColor": "#624aff",
+      "note": "DashScope 兼容模式",
+      "tags": [
+        "官方",
+        "国内"
+      ]
+    },
+    {
+      "id": "baichuan",
+      "name": "百川智能 官网",
+      "group": "china",
+      "baseUrl": "https://api.baichuan-ai.com/v1",
+      "logo": "assets/logos/lab-baichuan.png",
+      "iconDomain": "baichuan-ai.com",
+      "brandColor": "#0057ff",
+      "note": "Baichuan 系列",
+      "tags": [
+        "官方",
+        "国内"
+      ]
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax 官网",
+      "group": "china",
+      "baseUrl": "https://api.minimaxi.com/v1",
+      "iconDomain": "minimaxi.com",
+      "logo": "assets/logos/lab-minimax.png",
+      "brandColor": "#ff6b35",
+      "note": "海螺 / speech 系列 TTS",
+      "ttsAdapter": "minimax-tts",
+      "tags": [
+        "官方",
+        "国内"
+      ]
+    },
+    {
+      "id": "stepfun",
+      "name": "阶跃星辰 官网",
+      "group": "china",
+      "baseUrl": "https://api.stepfun.com/v1",
+      "iconDomain": "stepfun.com",
+      "brandColor": "#2563eb",
+      "note": "Step 系列",
+      "tags": [
+        "官方",
+        "国内"
+      ],
+      "logo": "assets/logos/lab-stepfun.png"
+    },
+    {
+      "id": "volcengine",
+      "name": "火山方舟 · 豆包",
+      "group": "china",
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+      "iconDomain": "volcengine.com",
+      "brandColor": "#3370ff",
+      "note": "字节豆包 / 方舟",
+      "tags": [
+        "官方",
+        "国内"
+      ],
+      "logo": "assets/logos/lab-volcengine.png"
+    },
+    {
+      "id": "baidu",
+      "name": "文心一言 · 千帆",
+      "group": "china",
+      "baseUrl": "https://qianfan.baidubce.com/v2",
+      "logo": "assets/logos/lab-baidu.ico",
+      "iconDomain": "baidu.com",
+      "brandColor": "#2932e1",
+      "note": "文心大模型",
+      "tags": [
+        "官方",
+        "国内"
+      ]
+    },
+    {
+      "id": "tencent",
+      "name": "腾讯混元 官网",
+      "group": "china",
+      "baseUrl": "https://api.hunyuan.cloud.tencent.com/v1",
+      "logo": "assets/logos/lab-tencent.png",
+      "iconDomain": "tencent.com",
+      "brandColor": "#00a870",
+      "note": "混元 OpenAI 兼容",
+      "tags": [
+        "官方",
+        "国内"
+      ]
+    },
+    {
+      "id": "lingyi",
+      "name": "零一万物 Yi 官网",
+      "group": "china",
+      "baseUrl": "https://api.lingyiwanwu.com/v1",
+      "logo": "assets/logos/lab-lingyi.png",
+      "iconDomain": "01.ai",
+      "brandColor": "#111827",
+      "note": "Yi 系列",
+      "tags": [
+        "官方",
+        "国内"
+      ]
+    },
+    {
+      "id": "modelscope",
+      "name": "魔搭 ModelScope",
+      "group": "china",
+      "baseUrl": "https://api-inference.modelscope.cn/v1",
+      "iconDomain": "modelscope.cn",
+      "brandColor": "#624aff",
+      "note": "开源模型推理",
+      "tags": [
+        "国内",
+        "开源"
+      ],
+      "logo": "assets/logos/lab-modelscope.png"
+    },
+    {
+      "id": "github-models",
+      "name": "GitHub Models",
+      "group": "agg",
+      "baseUrl": "https://models.github.ai/inference",
+      "logo": "assets/logos/lab-github-models.png",
+      "iconDomain": "github.com",
+      "brandColor": "#24292f",
+      "note": "GitHub 模型推理",
+      "tags": [
+        "免费层"
+      ]
+    },
+    {
+      "id": "replicate",
+      "name": "Replicate",
+      "group": "agg",
+      "baseUrl": "https://api.replicate.com/v1",
+      "logo": "assets/logos/lab-replicate.png",
+      "iconDomain": "replicate.com",
+      "brandColor": "#000000",
+      "note": "开源模型一键部署",
+      "tags": [
+        "开源"
+      ]
+    },
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "group": "agg",
+      "baseUrl": "https://router.huggingface.co/v1",
+      "logo": "assets/logos/lab-huggingface.ico",
+      "iconDomain": "huggingface.co",
+      "brandColor": "#ffd21e",
+      "note": "Inference API",
+      "tags": [
+        "开源"
+      ]
+    },
+    {
+      "id": "hyperbolic",
+      "name": "Hyperbolic",
+      "group": "agg",
+      "baseUrl": "https://api.hyperbolic.xyz/v1",
+      "iconDomain": "hyperbolic.xyz",
+      "brandColor": "#7c3aed",
+      "note": "GPU 推理市场",
+      "tags": [
+        "推理"
+      ],
+      "logo": "assets/logos/lab-hyperbolic.png"
+    },
+    {
+      "id": "novita",
+      "name": "Novita AI",
+      "group": "agg",
+      "baseUrl": "https://api.novita.ai/v3/openai",
+      "iconDomain": "novita.ai",
+      "brandColor": "#0ea5e9",
+      "note": "图像 / LLM API",
+      "tags": [
+        "推理"
+      ],
+      "logo": "assets/logos/lab-novita.png"
+    },
+    {
+      "id": "sambanova",
+      "name": "SambaNova",
+      "group": "agg",
+      "baseUrl": "https://api.sambanova.ai/v1",
+      "iconDomain": "sambanova.ai",
+      "brandColor": "#e11d48",
+      "note": "企业级推理",
+      "tags": [
+        "企业"
+      ],
+      "logo": "assets/logos/lab-sambanova.png"
+    },
+    {
+      "id": "cerebras",
+      "name": "Cerebras",
+      "group": "agg",
+      "baseUrl": "https://api.cerebras.ai/v1",
+      "iconDomain": "cerebras.ai",
+      "brandColor": "#f59e0b",
+      "note": "超高速推理芯片",
+      "tags": [
+        "推理"
+      ],
+      "logo": "assets/logos/lab-cerebras.png"
+    },
+    {
+      "id": "lepton",
+      "name": "Lepton AI",
+      "group": "agg",
+      "baseUrl": "https://api.lepton.ai/v1",
+      "iconDomain": "lepton.ai",
+      "brandColor": "#22c55e",
+      "note": "轻量推理云",
+      "tags": [],
+      "logo": "assets/logos/lab-lepton.png"
+    },
+    {
+      "id": "baseten",
+      "name": "Baseten",
+      "group": "agg",
+      "baseUrl": "https://model-{MODEL_ID}.api.baseten.co/v1",
+      "logo": "assets/logos/lab-baseten.ico",
+      "iconDomain": "baseten.co",
+      "brandColor": "#111827",
+      "note": "需替换 MODEL_ID",
+      "tags": []
+    },
+    {
+      "id": "ppinfra",
+      "name": "PPInfra",
+      "group": "agg",
+      "baseUrl": "https://api.ppinfra.com/v3/openai",
+      "iconDomain": "ppinfra.com",
+      "brandColor": "#3b82f6",
+      "note": "派欧云推理",
+      "tags": [
+        "国内"
+      ],
+      "logo": "assets/logos/lab-ppinfra.png"
+    },
+    {
+      "id": "uniapi",
+      "name": "UniAPI",
+      "group": "agg",
+      "baseUrl": "https://api.uniapi.io/v1",
+      "iconDomain": "uniapi.io",
+      "brandColor": "#6366f1",
+      "note": "多模型中转",
+      "tags": [
+        "聚合"
+      ],
+      "logo": "assets/logos/lab-uniapi.png"
+    },
+    {
+      "id": "litellm-proxy",
+      "name": "LiteLLM Proxy",
+      "group": "agg",
+      "baseUrl": "http://127.0.0.1:4000/v1",
+      "logo": "assets/logos/lab-litellm-proxy.png",
+      "iconDomain": "litellm.ai",
+      "brandColor": "#0f172a",
+      "note": "自托管统一网关",
+      "tags": [
+        "自建"
+      ]
+    },
+    {
+      "id": "lmstudio",
+      "name": "LM Studio",
+      "group": "local",
+      "baseUrl": "http://127.0.0.1:1234/v1",
+      "logo": "assets/logos/lab-lmstudio.ico",
+      "iconDomain": "lmstudio.ai",
+      "brandColor": "#1e3a5f",
+      "note": "本地图形化运行",
+      "tags": [
+        "本地"
+      ]
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "group": "local",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "logo": "assets/logos/lab-ollama.png",
+      "iconDomain": "ollama.com",
+      "brandColor": "#000000",
+      "note": "本地拉取模型",
+      "tags": [
+        "本地"
+      ]
+    },
+    {
+      "id": "localai",
+      "name": "LocalAI",
+      "group": "local",
+      "baseUrl": "http://127.0.0.1:8080/v1",
+      "iconDomain": "localai.io",
+      "brandColor": "#059669",
+      "note": "自托管多模态",
+      "tags": [
+        "本地",
+        "开源"
+      ],
+      "logo": "assets/logos/lab-localai.png"
+    },
+    {
+      "id": "jan",
+      "name": "Jan",
+      "group": "local",
+      "baseUrl": "http://127.0.0.1:1337/v1",
+      "logo": "assets/logos/lab-jan.ico",
+      "iconDomain": "jan.ai",
+      "brandColor": "#2563eb",
+      "note": "本地隐私助手",
+      "tags": [
+        "本地"
+      ]
+    },
+    {
+      "id": "vllm",
+      "name": "vLLM",
+      "group": "local",
+      "baseUrl": "http://127.0.0.1:8000/v1",
+      "logo": "assets/logos/lab-vllm.png",
+      "iconDomain": "vllm.ai",
+      "brandColor": "#7c3aed",
+      "note": "高性能推理服务",
+      "tags": [
+        "本地",
+        "开源"
+      ]
+    },
+    {
+      "id": "bedrock",
+      "name": "Amazon Bedrock",
+      "group": "intl",
+      "baseUrl": "https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1",
+      "logo": "assets/logos/lab-bedrock.ico",
+      "iconDomain": "aws.amazon.com",
+      "brandColor": "#ff9900",
+      "note": "需 AWS 凭证与区域",
+      "tags": [
+        "企业"
+      ]
+    },
+    {
+      "id": "oracle-oci",
+      "name": "Oracle OCI",
+      "group": "intl",
+      "baseUrl": "https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/20231130/actions/v1",
+      "logo": "assets/logos/lab-oracle-oci.png",
+      "iconDomain": "oracle.com",
+      "brandColor": "#c74634",
+      "note": "OCI 生成式 AI",
+      "tags": [
+        "企业"
+      ]
+    },
+    {
+      "id": "ibm-watsonx",
+      "name": "IBM watsonx",
+      "group": "intl",
+      "baseUrl": "https://us-south.ml.cloud.ibm.com/ml/v1",
+      "logo": "assets/logos/lab-ibm-watsonx.png",
+      "iconDomain": "ibm.com",
+      "brandColor": "#0f62fe",
+      "note": "企业 watsonx.ai",
+      "tags": [
+        "企业"
+      ]
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "group": "intl",
+      "baseUrl": "https://api.anthropic.com/v1",
+      "logo": "assets/logos/lab-anthropic.png",
+      "iconDomain": "anthropic.com",
+      "brandColor": "#d4a574",
+      "note": "Claude；多数工具需 OpenAI 兼容中转",
+      "tags": [
+        "官方"
+      ]
+    },
+    {
+      "id": "vertexai",
+      "name": "Google Vertex AI",
+      "group": "intl",
+      "baseUrl": "https://YOUR-REGION-aiplatform.googleapis.com/v1",
+      "logo": "assets/logos/lab-vertexai.ico",
+      "iconDomain": "cloud.google.com",
+      "brandColor": "#4285f4",
+      "note": "需 GCP 项目与区域端点",
+      "tags": [
+        "企业"
+      ]
+    },
+    {
+      "id": "jina",
+      "name": "Jina AI",
+      "group": "intl",
+      "baseUrl": "https://api.jina.ai/v1",
+      "logo": "assets/logos/lab-jina.png",
+      "iconDomain": "jina.ai",
+      "brandColor": "#ff0066",
+      "note": "Embedding / Reader / 部分对话",
+      "tags": []
+    },
+    {
+      "id": "voyageai",
+      "name": "Voyage AI",
+      "group": "intl",
+      "baseUrl": "https://api.voyageai.com/v1",
+      "logo": "assets/logos/lab-voyageai.ico",
+      "iconDomain": "voyageai.com",
+      "brandColor": "#111827",
+      "note": "向量与 Rerank",
+      "tags": []
+    },
+    {
+      "id": "poe",
+      "name": "Poe",
+      "group": "intl",
+      "baseUrl": "https://api.poe.com/v1",
+      "iconDomain": "poe.com",
+      "brandColor": "#5c46f5",
+      "note": "Quora Poe OpenAI 兼容",
+      "tags": [
+        "聚合"
+      ],
+      "logo": "assets/logos/lab-poe.png"
+    },
+    {
+      "id": "github-copilot",
+      "name": "GitHub Copilot",
+      "group": "intl",
+      "baseUrl": "https://api.githubcopilot.com",
+      "logo": "assets/logos/lab-github-copilot.png",
+      "iconDomain": "github.com",
+      "brandColor": "#24292f",
+      "note": "需 Copilot 订阅与专用鉴权",
+      "tags": []
+    },
+    {
+      "id": "vercel-ai-gateway",
+      "name": "Vercel AI Gateway",
+      "group": "agg",
+      "baseUrl": "https://ai-gateway.vercel.sh/v1",
+      "iconDomain": "vercel.com",
+      "brandColor": "#000000",
+      "note": "统一网关多模型",
+      "tags": [
+        "聚合"
+      ],
+      "logo": "assets/logos/lab-vercel-ai-gateway.png"
+    },
+    {
+      "id": "mimo",
+      "name": "小米 MiMo 官网",
+      "group": "china",
+      "baseUrl": "https://api.xiaomimimo.com/v1",
+      "iconDomain": "mi.com",
+      "brandColor": "#ff6900",
+      "note": "小米大模型；TTS 见 mimo-v2.5-tts 系列",
+      "ttsAdapter": "mimo-chat",
+      "tags": [
+        "官方",
+        "国内",
+        "编程"
+      ],
+      "logo": "assets/logos/lab-mimo.png"
+    },
+    {
+      "id": "doubao",
+      "name": "豆包 官网",
+      "group": "china",
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+      "logo": "assets/logos/lab-doubao.png",
+      "iconDomain": "volcengine.com",
+      "brandColor": "#3370ff",
+      "note": "字节豆包；与「火山方舟」同端点",
+      "tags": [
+        "官方",
+        "国内"
+      ]
+    },
+    {
+      "id": "infini",
+      "name": "无问芯穹 Infini",
+      "group": "china",
+      "baseUrl": "https://cloud.infini-ai.com/maas/v1",
+      "iconDomain": "infini-ai.com",
+      "brandColor": "#2563eb",
+      "note": "GenStudio MaaS；编码套餐用 /maas/coding/v1",
+      "tags": [
+        "国内",
+        "聚合"
+      ],
+      "logo": "assets/logos/lab-infini.png"
+    },
+    {
+      "id": "longcat",
+      "name": "LongCat",
+      "group": "china",
+      "baseUrl": "https://api.longcat.chat/openai/v1",
+      "iconDomain": "longcat.chat",
+      "brandColor": "#6366f1",
+      "note": "LongCat 开放平台",
+      "tags": [
+        "国内"
+      ],
+      "logo": "assets/logos/lab-longcat.png"
+    },
+    {
+      "id": "xirang",
+      "name": "天翼息壤",
+      "group": "china",
+      "baseUrl": "https://wishub-x1.ctyun.cn/v1",
+      "iconDomain": "ctyun.cn",
+      "brandColor": "#e60012",
+      "note": "中国电信息壤智算",
+      "tags": [
+        "国内",
+        "云"
+      ],
+      "logo": "assets/logos/lab-xirang.png"
+    },
+    {
+      "id": "tencent-ti",
+      "name": "腾讯云 TI",
+      "group": "china",
+      "baseUrl": "https://api.lkeap.cloud.tencent.com/v1",
+      "iconDomain": "cloud.tencent.com",
+      "brandColor": "#00a4ff",
+      "note": "腾讯云智能体 / 知识引擎",
+      "tags": [
+        "国内",
+        "云"
+      ],
+      "logo": "assets/logos/lab-tencent-ti.png"
+    },
+    {
+      "id": "iflytek",
+      "name": "讯飞星火 官网",
+      "group": "china",
+      "baseUrl": "https://spark-api-open.xf-yun.com/v1",
+      "logo": "assets/logos/lab-iflytek.ico",
+      "iconDomain": "xfyun.cn",
+      "brandColor": "#e53935",
+      "note": "星火认知大模型 OpenAPI",
+      "tags": [
+        "官方",
+        "国内"
+      ]
+    },
+    {
+      "id": "cherryin",
+      "name": "CherryIN",
+      "group": "relay",
+      "baseUrl": "https://open.cherryin.net/v1",
+      "iconDomain": "cherry-ai.com",
+      "brandColor": "#e11d48",
+      "note": "Cherry Studio 合作中转",
+      "tags": [
+        "中转",
+        "OAuth"
+      ],
+      "logo": "assets/logos/lab-cherryin.png"
+    },
+    {
+      "id": "aihubmix",
+      "name": "AiHubMix",
+      "group": "relay",
+      "baseUrl": "https://aihubmix.com/v1",
+      "iconDomain": "aihubmix.com",
+      "brandColor": "#6366f1",
+      "note": "多模型 API 聚合",
+      "tags": [
+        "中转",
+        "聚合"
+      ],
+      "logo": "assets/logos/lab-aihubmix.png"
+    },
+    {
+      "id": "302ai",
+      "name": "302.AI",
+      "group": "relay",
+      "baseUrl": "https://api.302.ai/v1",
+      "iconDomain": "302.ai",
+      "brandColor": "#f97316",
+      "note": "302.AI 模型超市",
+      "tags": [
+        "中转",
+        "聚合"
+      ],
+      "logo": "assets/logos/lab-302ai.png"
+    },
+    {
+      "id": "tokenflux",
+      "name": "TokenFlux",
+      "group": "relay",
+      "baseUrl": "https://api.tokenflux.ai/openai/v1",
+      "iconDomain": "tokenflux.ai",
+      "brandColor": "#8b5cf6",
+      "note": "Token 套餐中转",
+      "tags": [
+        "中转"
+      ],
+      "logo": "assets/logos/lab-tokenflux.jpg"
+    },
+    {
+      "id": "dmxapi",
+      "name": "DMXAPI",
+      "group": "relay",
+      "baseUrl": "https://www.dmxapi.cn/v1",
+      "iconDomain": "dmxapi.cn",
+      "brandColor": "#0ea5e9",
+      "note": "国内 API 中转",
+      "tags": [
+        "中转",
+        "国内"
+      ],
+      "logo": "assets/logos/lab-dmxapi.png"
+    },
+    {
+      "id": "ocoolai",
+      "name": "ocoolAI",
+      "group": "relay",
+      "baseUrl": "https://api.ocoolai.com/v1",
+      "iconDomain": "ocoolai.com",
+      "brandColor": "#14b8a6",
+      "note": "ocoolAI 转发",
+      "tags": [
+        "中转"
+      ],
+      "logo": "assets/logos/lab-ocoolai.png"
+    },
+    {
+      "id": "alayanew",
+      "name": "AlayaNew",
+      "group": "relay",
+      "baseUrl": "https://deepseek.alayanew.com/v1",
+      "iconDomain": "alayanew.com",
+      "brandColor": "#4f46e5",
+      "note": "AlayaNew 推理",
+      "tags": [
+        "中转"
+      ],
+      "logo": "assets/logos/lab-alayanew.png"
+    },
+    {
+      "id": "aionly",
+      "name": "AIOnly",
+      "group": "relay",
+      "baseUrl": "https://api.aiionly.com/v1",
+      "iconDomain": "aiionly.com",
+      "brandColor": "#64748b",
+      "note": "AIOnly 聚合",
+      "tags": [
+        "中转"
+      ],
+      "logo": "assets/logos/lab-aionly.png"
+    },
+    {
+      "id": "burncloud",
+      "name": "BurnCloud",
+      "group": "relay",
+      "baseUrl": "https://ai.burncloud.com/v1",
+      "iconDomain": "burncloud.com",
+      "brandColor": "#ef4444",
+      "note": "BurnCloud 中转",
+      "tags": [
+        "中转"
+      ],
+      "logo": "assets/logos/lab-burncloud.svg"
+    },
+    {
+      "id": "cephalon",
+      "name": "Cephalon",
+      "group": "relay",
+      "baseUrl": "https://cephalon.cloud/v1",
+      "iconDomain": "cephalon.cloud",
+      "brandColor": "#06b6d4",
+      "note": "Cephalon 云端",
+      "tags": [
+        "中转"
+      ],
+      "logo": "assets/logos/lab-cephalon.png"
+    },
+    {
+      "id": "lanyun",
+      "name": "蓝耘 LANYUN",
+      "group": "relay",
+      "baseUrl": "https://maas-api.lanyun.net/v1",
+      "iconDomain": "lanyun.net",
+      "brandColor": "#2563eb",
+      "note": "蓝耘 MaaS",
+      "tags": [
+        "中转",
+        "国内"
+      ],
+      "logo": "assets/logos/lab-lanyun.png"
+    },
+    {
+      "id": "ph8",
+      "name": "PH8",
+      "group": "relay",
+      "baseUrl": "https://ph8.co/v1",
+      "iconDomain": "ph8.co",
+      "brandColor": "#a855f7",
+      "note": "PH8 API",
+      "tags": [
+        "中转"
+      ],
+      "logo": "assets/logos/lab-ph8.jpg"
+    },
+    {
+      "id": "sophnet",
+      "name": "SophNet",
+      "group": "relay",
+      "baseUrl": "https://www.sophnet.com/api/open-apis/v1",
+      "iconDomain": "sophnet.com",
+      "brandColor": "#0f766e",
+      "note": "SophNet 开放 API",
+      "tags": [
+        "中转"
+      ],
+      "logo": "assets/logos/lab-sophnet.svg"
+    },
+    {
+      "id": "qiniu",
+      "name": "七牛云 AI",
+      "group": "relay",
+      "baseUrl": "https://api.qnaigc.com/v1",
+      "iconDomain": "qiniu.com",
+      "brandColor": "#00a4ff",
+      "note": "七牛推理 / 大模型",
+      "tags": [
+        "中转",
+        "国内"
+      ],
+      "logo": "assets/logos/lab-qiniu.png"
+    },
+    {
+      "id": "new-api",
+      "name": "New API",
+      "group": "local",
+      "baseUrl": "http://127.0.0.1:3000/v1",
+      "iconDomain": "newapi.pro",
+      "brandColor": "#0f172a",
+      "note": "One API / New API 自托管网关",
+      "tags": [
+        "本地",
+        "自建",
+        "聚合"
+      ],
+      "logo": "assets/logos/lab-new-api.png"
+    },
+    {
+      "id": "ovms",
+      "name": "OpenVINO Model Server",
+      "group": "local",
+      "baseUrl": "http://127.0.0.1:8000/v3",
+      "iconDomain": "intel.com",
+      "brandColor": "#0071c5",
+      "note": "Intel OVMS 本地推理",
+      "tags": [
+        "本地"
+      ],
+      "logo": "assets/logos/lab-ovms.png"
+    },
+    {
+      "id": "gpustack",
+      "name": "GPUStack",
+      "group": "local",
+      "baseUrl": "http://127.0.0.1:8080/v1",
+      "iconDomain": "gpustack.ai",
+      "brandColor": "#22c55e",
+      "note": "GPUStack 自托管；按部署改地址",
+      "tags": [
+        "本地",
+        "自建"
+      ],
+      "logo": "assets/logos/lab-gpustack.png"
+    },
+    {
+      "id": "dashscope",
+      "name": "阿里百炼 DashScope",
+      "group": "china",
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "iconDomain": "bailian.aliyun.com",
+      "brandColor": "#624aff",
+      "note": "通义 / CosyVoice / Sambert TTS",
+      "ttsAdapter": "dashscope-tts",
+      "tags": [
+        "官方",
+        "国内"
+      ],
+      "logo": "assets/logos/lab-dashscope.png"
+    },
+    {
+      "id": "sensenova",
+      "name": "商汤日日新",
+      "group": "china",
+      "baseUrl": "https://api.sensenova.cn/compatible-mode/v1",
+      "iconDomain": "sensenova.cn",
+      "brandColor": "#0066ff",
+      "note": "SenseNova 官方 OpenAI 兼容",
+      "tags": [
+        "官方",
+        "国内"
+      ],
+      "logo": "assets/logos/lab-sensenova.png"
+    },
+    {
+      "id": "ai360",
+      "name": "360智脑 官网",
+      "group": "china",
+      "baseUrl": "https://api.360.cn/v1",
+      "iconDomain": "ai.360.com",
+      "brandColor": "#00a854",
+      "note": "360 智脑开放平台",
+      "tags": [
+        "官方",
+        "国内"
+      ],
+      "logo": "assets/logos/lab-ai360.png"
+    },
+    {
+      "id": "skywork",
+      "name": "昆仑天工 官网",
+      "group": "china",
+      "baseUrl": "https://api.apifree.ai/v1",
+      "iconDomain": "tiangong.cn",
+      "brandColor": "#6366f1",
+      "note": "天工 Skywork；官方平台 model-platform.tiangong.cn",
+      "tags": [
+        "官方",
+        "国内"
+      ],
+      "logo": "assets/logos/lab-skywork.png"
+    },
+    {
+      "id": "modelbest",
+      "name": "面壁智能 官网",
+      "group": "china",
+      "baseUrl": "https://api.modelbest.cn/v1",
+      "iconDomain": "modelbest.cn",
+      "brandColor": "#111827",
+      "note": "MiniCPM 系列官方 API",
+      "tags": [
+        "官方",
+        "国内",
+        "端侧"
+      ],
+      "logo": "assets/logos/lab-modelbest.png"
+    },
+    {
+      "id": "metaso",
+      "name": "秘塔 AI 官网",
+      "group": "china",
+      "baseUrl": "https://metaso.cn/api/v1",
+      "iconDomain": "metaso.cn",
+      "brandColor": "#2563eb",
+      "note": "秘塔搜索 / Metaso API",
+      "tags": [
+        "官方",
+        "国内",
+        "搜索"
+      ],
+      "logo": "assets/logos/lab-metaso.ico"
+    },
+    {
+      "id": "gitee-ai",
+      "name": "Gitee 模力方舟",
+      "group": "china",
+      "baseUrl": "https://ai.gitee.com/v1",
+      "iconDomain": "gitee.com",
+      "brandColor": "#c71d23",
+      "note": "Gitee AI Serverless API",
+      "tags": [
+        "官方",
+        "国内",
+        "开源"
+      ],
+      "logo": "assets/logos/lab-gitee-ai.png"
+    },
+    {
+      "id": "huawei-pangu",
+      "name": "华为盘古 官网",
+      "group": "china",
+      "baseUrl": "https://YOUR-ENDPOINT/api/v2",
+      "iconDomain": "huaweicloud.com",
+      "brandColor": "#cf0a2c",
+      "note": "华为云 ModelArts 部署端点",
+      "tags": [
+        "官方",
+        "国内",
+        "企业"
+      ],
+      "logo": "assets/logos/lab-huawei-pangu.png"
+    },
+    {
+      "id": "meta-llama",
+      "name": "Meta Llama 官网",
+      "group": "intl",
+      "baseUrl": "https://api.llama.com/compat/v1",
+      "iconDomain": "llama.com",
+      "brandColor": "#0467df",
+      "note": "Meta 官方 Llama API",
+      "tags": [
+        "官方"
+      ],
+      "logo": "assets/logos/lab-meta-llama.ico"
+    },
+    {
+      "id": "stability-ai",
+      "name": "Stability AI 官网",
+      "group": "intl",
+      "baseUrl": "https://api.stability.ai/v1",
+      "iconDomain": "stability.ai",
+      "brandColor": "#7c3aed",
+      "note": "Stable Diffusion / 多模态 API",
+      "tags": [
+        "官方"
+      ],
+      "logo": "assets/logos/lab-stability-ai.png"
+    },
+    {
+      "id": "aleph-alpha",
+      "name": "Aleph Alpha 官网",
+      "group": "intl",
+      "baseUrl": "https://api.aleph-alpha.com/v1",
+      "iconDomain": "aleph-alpha.com",
+      "brandColor": "#0f172a",
+      "note": "欧洲 Luminous 系列",
+      "tags": [
+        "官方",
+        "欧洲"
+      ],
+      "logo": "assets/logos/lab-aleph-alpha.ico"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "byToolId": {
+    "chat-chatgpt": "openai",
+    "chat-claude": "anthropic",
+    "chat-gemini": "google-gemini",
+    "chat-microsoft-copilot": "openai",
+    "chat-perplexity": "openrouter",
+    "chat-poe": "openrouter",
+    "chat-deepseek": "deepseek",
+    "chat-kimi": "moonshot",
+    "chat-openrouter": "openrouter",
+    "chat-groq": "groq"
+  },
+  "byDomain": {
+    "chatgpt.com": "openai",
+    "openai.com": "openai",
+    "claude.ai": "anthropic",
+    "anthropic.com": "anthropic",
+    "gemini.google.com": "google-gemini",
+    "deepseek.com": "deepseek",
+    "openrouter.ai": "openrouter",
+    "groq.com": "groq",
+    "mistral.ai": "mistral",
+    "together.ai": "together",
+    "api.together.xyz": "together",
+    "fireworks.ai": "fireworks",
+    "siliconflow.cn": "siliconflow",
+    "console.groq.com": "groq"
+  }
+}
