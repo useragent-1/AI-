@@ -15,7 +15,7 @@
     <meta name="twitter:description" content="700+ AI 工具导航：搜索、筛选、收藏、对比。">
     <link rel="canonical" href="https://useragent-1.github.io/AI-/">
     <title>NEUX</title>
-    <link rel="stylesheet" href="styles.css?v=151">
+    <link rel="stylesheet" href="styles.css?v=177">
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   </head>
   <body>
@@ -39,7 +39,18 @@
             </span>
           </a>
           <nav class="top-nav" aria-label="主导航">
-            <a class="top-nav-link" href="#directory" data-nav="directory">工具</a>
+            <div class="top-nav-group" data-nav-group="directory">
+              <button class="top-nav-link top-nav-trigger" type="button" data-nav="directory" aria-haspopup="menu" aria-expanded="false">
+                工具
+                <svg class="top-nav-chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8.12 9.29 12 13.17l3.88-3.88a1 1 0 1 1 1.42 1.42l-4.59 4.59a1 1 0 0 1-1.42 0L6.7 10.71a1 1 0 0 1 1.42-1.42z"/></svg>
+              </button>
+              <div class="top-nav-menu" role="menu" aria-label="工具子目录" hidden>
+                <a class="top-nav-menu-item" role="menuitem" href="#directory" data-nav-sub="directory">AI网站</a>
+                <a class="top-nav-menu-item" role="menuitem" href="#prompts" data-nav-sub="prompts">Prompt 提示词</a>
+                <a class="top-nav-menu-item" role="menuitem" href="#skills" data-nav-sub="skills">Skill</a>
+                <a class="top-nav-menu-item" role="menuitem" href="#mcp" data-nav-sub="mcp">MCP</a>
+              </div>
+            </div>
             <a class="top-nav-link" href="#rankings" data-nav="rankings">榜单</a>
             <a class="top-nav-link" href="#lab" data-nav="lab">试验场</a>
           </nav>
@@ -214,6 +225,93 @@
       </section>
       </div>
 
+      <section class="prompts-page app-view" id="prompts" hidden aria-labelledby="promptsTitle">
+        <div class="rankings-shell">
+          <header class="rankings-hero">
+            <p class="eyebrow">Prompt · 提示词库</p>
+            <h1 id="promptsTitle">Prompt 提示词</h1>
+            <p class="rankings-lead">用来快速复用高质量提示词。后续可继续扩充、分类、收藏。</p>
+          </header>
+          <div class="rankings-panel">
+            <div class="toolbar">
+              <div class="toolbar-main">
+                <div>
+                  <p class="eyebrow">提示词列表</p>
+                  <h2 id="promptsHeading">全部 Prompt</h2>
+                  <p class="result-meta" id="promptsMeta">正在加载…</p>
+                </div>
+                <div class="toolbar-actions">
+                  <label class="select-label">
+                    <span>搜索</span>
+                    <input id="promptsSearch" type="search" placeholder="搜索提示词…" autocomplete="off" enterkeyhint="search">
+                  </label>
+                </div>
+              </div>
+              <div class="prompt-categories" id="promptsCategories" aria-label="提示词分类"></div>
+            </div>
+            <div class="tool-grid" id="promptsGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="skills-page app-view" id="skills" hidden aria-labelledby="skillsTitle">
+        <div class="rankings-shell">
+          <header class="rankings-hero">
+            <p class="eyebrow">Skill · 工作流能力</p>
+            <h1 id="skillsTitle">Skill</h1>
+            <p class="rankings-lead">整理可复用的技能/脚本/流程入口（后续可对接 Cursor Skills 或你自己的规范）。</p>
+          </header>
+          <div class="rankings-panel">
+            <div class="toolbar">
+              <div class="toolbar-main">
+                <div>
+                  <p class="eyebrow">Skill 列表</p>
+                  <h2 id="skillsHeading">全部 Skill</h2>
+                  <p class="result-meta" id="skillsMeta">正在加载…</p>
+                </div>
+                <div class="toolbar-actions">
+                  <label class="select-label">
+                    <span>搜索</span>
+                    <input id="skillsSearch" type="search" placeholder="搜索 Skill…" autocomplete="off" enterkeyhint="search">
+                  </label>
+                </div>
+              </div>
+              <div class="prompt-categories" id="skillsCategories" aria-label="Skill 分类"></div>
+            </div>
+            <div class="tool-grid" id="skillsGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mcp-page app-view" id="mcp" hidden aria-labelledby="mcpTitle">
+        <div class="rankings-shell">
+          <header class="rankings-hero">
+            <p class="eyebrow">MCP · 工具/服务连接</p>
+            <h1 id="mcpTitle">MCP</h1>
+            <p class="rankings-lead">收录常用 MCP Server、用途与配置方式，方便快速接入。</p>
+          </header>
+          <div class="rankings-panel">
+            <div class="toolbar">
+              <div class="toolbar-main">
+                <div>
+                  <p class="eyebrow">MCP 列表</p>
+                  <h2 id="mcpHeading">全部 MCP</h2>
+                  <p class="result-meta" id="mcpMeta">正在加载…</p>
+                </div>
+                <div class="toolbar-actions">
+                  <label class="select-label">
+                    <span>搜索</span>
+                    <input id="mcpSearch" type="search" placeholder="搜索 MCP…" autocomplete="off" enterkeyhint="search">
+                  </label>
+                </div>
+              </div>
+              <div class="prompt-categories" id="mcpCategories" aria-label="MCP 分类"></div>
+            </div>
+            <div class="tool-grid" id="mcpGrid"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="rankings-page app-view" id="rankings" hidden aria-labelledby="rankingsTitle">
         <div class="rankings-shell">
           <header class="rankings-hero">
@@ -243,8 +341,8 @@
       <section class="lab-page app-view" id="lab" hidden aria-labelledby="labTitle">
         <div class="lab-shell lab-shell--fullscreen">
           <h1 id="labTitle" class="visually-hidden">试验场</h1>
-          <div class="lab-layout lab-layout--studio lab-workspace">
-            <div class="lab-studio lab-studio--cherry" aria-label="模型平台管理">
+          <div class="lab-layout lab-layout--studio lab-workspace" id="labWorkspace">
+            <div class="lab-studio lab-studio--cherry" id="labStudioPanel" aria-label="模型平台管理">
               <aside class="lab-studio-rail" aria-label="模型平台">
                 <div class="lab-studio-search-wrap">
                   <input class="lab-studio-search" id="labProviderSearch" type="search" placeholder="搜索模型平台…" autocomplete="off" aria-label="搜索模型平台">
@@ -254,7 +352,7 @@
                   <span aria-hidden="true">+</span> 自定义
                 </button>
               </aside>
-              <div class="lab-studio-main">
+              <div class="lab-studio-main" id="labStudioMain">
                 <header class="lab-studio-head">
                   <div class="lab-studio-head-brand" id="labStudioHead"></div>
                   <label class="lab-switch lab-studio-head-switch" title="启用此平台">
@@ -314,13 +412,30 @@
                   </section>
                   <section class="lab-studio-more" id="labStudioMore">
                     <div class="lab-studio-more-foot">
-                      <button type="button" class="lab-studio-more-label" id="labStudioMoreExpand" aria-expanded="true" aria-controls="labStudioMorePanel">
+                      <button
+                        type="button"
+                        class="lab-studio-more-label"
+                        id="labStudioMoreExpand"
+                        aria-expanded="true"
+                        aria-controls="labStudioMorePanel"
+                        title="点击展开/收起更多设置"
+                      >
                         <span>更多设置</span>
-                      </button>
-                      <button type="button" class="lab-studio-more-collapse" id="labStudioMoreCollapse" aria-expanded="true" aria-controls="labStudioMorePanel" title="收起更多设置">
-                        <span class="lab-studio-more-collapse-text">收起</span>
                         <svg class="lab-studio-more-chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8.12 9.29 12 13.17l3.88-3.88a1 1 0 1 1 1.42 1.42l-4.59 4.59a1 1 0 0 1-1.42 0L6.7 10.71a1 1 0 0 1 1.42-1.42z"/></svg>
                       </button>
+                      <div class="lab-studio-more-foot-actions">
+                        <button
+                          type="button"
+                          class="lab-studio-panel-collapse"
+                          id="labStudioPanelCollapse"
+                          aria-expanded="true"
+                          aria-controls="labStudioMain"
+                          title="收起平台配置，对话区占满剩余空间"
+                        >
+                          <svg class="lab-studio-panel-collapse-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M14.71 8.71 10.41 12l4.3 4.29a1 1 0 0 1-1.42 1.42l-5-5a1 1 0 0 1 0-1.42l5-5a1 1 0 1 1 1.42 1.42z"/></svg>
+                          <span class="lab-studio-panel-collapse-text">收起</span>
+                        </button>
+                      </div>
                     </div>
                     <div class="lab-studio-more-panel" id="labStudioMorePanel">
                     <div class="lab-studio-more-body">
@@ -362,6 +477,18 @@
                   </section>
                 </div>
               </div>
+              <button
+                type="button"
+                class="lab-studio-main-reveal"
+                id="labStudioMainReveal"
+                hidden
+                title="展开平台配置"
+                aria-label="展开平台配置"
+                aria-controls="labStudioMain"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M9.29 8.71 13.59 12l-4.3 4.29a1 1 0 0 0 1.42 1.42l5-5a1 1 0 0 0 0-1.42l-5-5a1 1 0 0 0-1.42 1.42z"/></svg>
+                <span>配置</span>
+              </button>
             </div>
             <section class="lab-panel lab-panel--chat" aria-label="对话测试">
               <div class="lab-chat-layout" id="labChatLayout">
@@ -391,18 +518,48 @@
                         </div>
                       </div>
                       <button type="button" class="lab-chat-sessions-action lab-chat-sessions-mode-btn" id="labSidebarModeAgent" aria-expanded="false" aria-controls="labSidebarAgentMenu">
-                        <svg class="lab-chat-sessions-action-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a2 2 0 0 1 2 2v1.1a6.2 6.2 0 0 1 3.9 3.9H19a2 2 0 1 1 0 4h-1.1a6.2 6.2 0 0 1-3.9 3.9V19a2 2 0 1 1-4 0v-1.1a6.2 6.2 0 0 1-3.9-3.9H5a2 2 0 1 1 0-4h1.1a6.2 6.2 0 0 1 3.9-3.9V5a2 2 0 0 1 2-2Zm0 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg>
-                        <span>Agent模式</span>
+                        <svg class="lab-chat-sessions-action-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 5h8v2H8V5Zm4-4a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM4 9a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H4Zm16 0a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2h-2ZM9 13.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm6 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM12 18c-2.21 0-4.23-1.09-5.45-2.76A6.9 6.9 0 0 0 12 16a6.9 6.9 0 0 0 5.45 2.24C16.23 16.91 14.21 18 12 18Z"/></svg>
+                        <span>Agent Mode</span>
                       </button>
                       <div class="lab-chat-sessions-submenu" id="labSidebarAgentMenu" hidden>
-                        <p class="lab-chat-sessions-submenu-note">Agent 功能入口（后续会放在这里）。</p>
+                        <button type="button" class="lab-chat-sessions-action" id="labNewAgentSession">
+                          <svg class="lab-chat-sessions-action-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M5 5h9.5a2.5 2.5 0 0 1 2.45 2h2.05A2.5 2.5 0 0 1 21 9.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm0 2v12h14V9.5H16V7H5Zm12.75 1.5 1.5 1.5H16V8.5h1.75Z"/></svg>
+                          <span>新 Agent 任务</span>
+                        </button>
                       </div>
+
                     </nav>
                   </div>
                   <div class="lab-chat-sessions-submenu" id="labSidebarChatListMenu">
                     <p class="lab-chat-session-notice" id="labSessionNotice" hidden aria-live="polite"></p>
                     <ul class="lab-chat-session-list" id="labSessionList" role="listbox" aria-label="全部对话"></ul>
                   </div>
+                  <section class="lab-agent-mysite" id="labAgentMySite" hidden aria-label="My Site 工作区">
+                    <header class="lab-agent-mysite-head">
+                      <h3 class="lab-agent-mysite-title">My Site</h3>
+                      <button type="button" class="lab-agent-mysite-refresh" id="labAgentSiteRefresh" title="刷新工作区" aria-label="刷新工作区">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08a5.99 5.99 0 0 1-5.65 4c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                      </button>
+                    </header>
+                    <div class="lab-agent-mysite-tree" id="labAgentSiteTree" role="tree" aria-label="Agent 项目文件"></div>
+                    <p class="lab-agent-mysite-peek" id="labAgentSitePeek" hidden></p>
+                  </section>
+                  <dialog class="lab-agent-mysite-code-dialog" id="labAgentSiteCodeDialog" aria-labelledby="labAgentSiteCodeTitle">
+                    <header class="lab-agent-mysite-code-head">
+                      <div>
+                        <p class="eyebrow">浏览代码</p>
+                        <h3 id="labAgentSiteCodeTitle">项目代码</h3>
+                      </div>
+                      <button type="button" class="lab-agent-mysite-code-close" id="labAgentSiteCodeClose" aria-label="关闭">×</button>
+                    </header>
+                    <div class="lab-agent-mysite-code-body">
+                      <aside class="lab-agent-mysite-code-files" id="labAgentSiteCodeFiles" aria-label="项目文件列表"></aside>
+                      <section class="lab-agent-mysite-code-main">
+                        <p class="lab-agent-mysite-code-path" id="labAgentSiteCodePath">选择文件</p>
+                        <pre class="lab-agent-mysite-code-view" id="labAgentSiteCodeView"><code></code></pre>
+                      </section>
+                    </div>
+                  </dialog>
                   </div>
                   <footer class="lab-chat-sessions-foot">
                     <button type="button" class="lab-chat-sessions-collapse" id="labSessionsCollapse" aria-expanded="true" aria-controls="labChatSessionsPane" title="收起对话列表">
@@ -607,7 +764,92 @@
                 <div class="lab-chat-stage-main">
                   <div class="lab-chat-messages" id="labChatMessages"></div>
                   <p class="lab-usage" id="labUsage" aria-live="polite"></p>
+                  <section class="lab-embed-browser" id="labEmbedBrowser" hidden aria-label="项目预览">
+                    <header class="lab-embed-browser-head">
+                      <div class="lab-embed-browser-brand">
+                        <strong>网站预览</strong>
+                        <span class="lab-embed-browser-title" id="labEmbedBrowserTitle">等待 Agent 生成项目</span>
+                      </div>
+                      <div class="lab-embed-browser-actions">
+                        <button
+                          type="button"
+                          class="lab-embed-browser-btn"
+                          id="labEmbedBrowserRefresh"
+                          title="刷新预览"
+                          aria-label="刷新预览"
+                          disabled
+                        >
+                          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08a5.99 5.99 0 0 1-5.65 4c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                        </button>
+                        <a
+                          class="lab-embed-browser-btn lab-embed-browser-btn--link"
+                          id="labEmbedBrowserExternal"
+                          href="#"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          hidden
+                        >新窗口</a>
+                        <button
+                          type="button"
+                          class="lab-embed-browser-btn"
+                          id="labEmbedBrowserChat"
+                          title="查看对话记录"
+                          aria-label="查看对话记录"
+                        >对话</button>
+                        <button
+                          type="button"
+                          class="lab-embed-browser-btn"
+                          id="labEmbedBrowserClose"
+                          title="收起预览"
+                          aria-label="收起预览"
+                        >×</button>
+                      </div>
+                    </header>
+                    <p class="lab-embed-browser-url" id="labEmbedBrowserUrl">尚未生成预览页面</p>
+                    <div class="lab-embed-browser-body">
+                      <div class="lab-embed-browser-placeholder" id="labEmbedBrowserPlaceholder">
+                        <p>点击左侧 My Site 的预览按钮查看项目页面。</p>
+                      </div>
+                      <iframe id="labEmbedBrowserFrame" title="Agent 项目预览" hidden></iframe>
+                    </div>
+                  </section>
                 </div>
+                  <section class="lab-agent-workbench" id="labAgentWorkbench" hidden aria-hidden="true" aria-label="Arena 沙盒">
+                    <header class="lab-agent-workbench-head">
+                      <div>
+                        <p class="eyebrow">Arena Sandbox</p>
+                        <h3 id="labAgentWorkbenchTitle">等待项目需求</h3>
+                      </div>
+                      <div class="lab-agent-workbench-meta">
+                        <span class="lab-agent-turn-badge" id="labAgentTurnBadge" hidden>0 / 24</span>
+                        <span class="lab-agent-run-status" id="labAgentRunStatus" data-state="idle">待命</span>
+                        <span class="lab-agent-model-pill" id="labAgentModelPill">未选择模型</span>
+                      </div>
+                    </header>
+                    <div class="lab-agent-workbench-grid">
+                      <aside class="lab-agent-workspace-panel" aria-label="工作区文件">
+                        <div class="lab-agent-panel-head">
+                          <strong>Files</strong>
+                          <small id="labAgentToolCount">0 tools</small>
+                        </div>
+                        <div class="lab-agent-file-tree" id="labAgentFileTree" role="tree"></div>
+                        <p class="lab-agent-workspace-path" id="labAgentWorkspacePath">local</p>
+                      </aside>
+                      <section class="lab-agent-code-panel" aria-label="代码查看">
+                        <div class="lab-agent-panel-head">
+                          <strong id="labAgentCodePath">选择文件查看</strong>
+                        </div>
+                        <pre class="lab-agent-code-view" id="labAgentCodeView"><code>// Agent 写入或修改的文件将实时显示在这里</code></pre>
+                      </section>
+                      <section class="lab-agent-preview-panel" aria-label="实时预览">
+                        <div class="lab-agent-panel-head">
+                          <strong>Preview</strong>
+                          <a id="labAgentPreviewOpen" href="#" target="_blank" rel="noopener noreferrer" hidden>新窗口</a>
+                        </div>
+                        <iframe id="labAgentPreviewFrame" title="Agent 生成项目预览"></iframe>
+                      </section>
+                    </div>
+                  </section>
               </div>
               <form class="lab-chat-composer" id="labChatForm">
                 <div class="lab-composer-box">
@@ -658,7 +900,7 @@
     <script src="assets/logos/manifest.js?v=701" defer></script>
     <script src="lab-markdown.js?v=1" defer></script>
     <script src="lab-tts.js?v=4" defer></script>
-    <script src="lab.js?v=92" defer></script>
-    <script src="script.js?v=719" defer></script>
+    <script src="lab.js?v=123" defer></script>
+    <script src="script.js?v=723" defer></script>
   </body>
 </html>

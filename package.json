@@ -3,7 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "node server.js",
     "build": "node scripts/build.mjs",
-    "check-links": "node scripts/check-links.mjs"
+    "sync-logos": "node scripts/sync-logo-manifest.mjs",
+    "import-catalog": "node scripts/import-mega-catalog.mjs",
+    "fetch-logos": "node scripts/fetch-logos.mjs",
+    "expand-catalog": "node scripts/import-mega-catalog.mjs && node scripts/fetch-logos.mjs",
+    "check-links": "node scripts/check-links.mjs",
+    "build-skills": "node scripts/build-skills-index.mjs"
   }
 }

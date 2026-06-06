@@ -8,6 +8,7 @@
   const LAB_SESSIONS_KEY = "neux-lab-sessions-v1";
   const SESSION_MODE_NORMAL = "normal";
   const SESSION_MODE_BATTLE = "battle";
+  const SESSION_MODE_AGENT = "agent";
 
   const defaultLabState = () => ({
     providerId: "openai",
@@ -32,6 +33,8 @@
     autoFetchOnTest: true,
     moreSettingsCollapsed: false,
     sessionsSidebarCollapsed: false,
+    studioPanelCollapsed: false,
+    sessionsPanelCollapsed: false,
     sessionsPanelMode: "chat",
     chatMode: "normal",
     renderMode: "markdown",
@@ -320,6 +323,7 @@
     delete state.battleMode;
     state.renderMode = "markdown";
     state.sessionsPanelMode = state.sessionsPanelMode === "agent" ? "agent" : "chat";
+    state.sessionsPanelCollapsed = state.sessionsPanelCollapsed === true;
     state.voiceMode = state.voiceMode === true;
     state.voiceTtsProviderId = String(state.voiceTtsProviderId || "");
     state.voiceTtsModelId = String(state.voiceTtsModelId || "");
@@ -617,8 +621,8 @@
   let labBound = false;
   let chatModelPickerBound = false;
   let labSessionsState = loadLabSessionsState();
-  ensureActiveSessionForMode(getCurrentSessionModeKey());
-  let labChatMessages = getActiveSessionMessages();
+  migrateSessionsStateV3(labSessionsState);
+  let labChatMessages = getActiveSessionId() ? getActiveSessionMessages() : [];
   let labAbortController = null;
   let labModelSearchQuery = "";
   let labSessionSearchQuery = "";
@@ -702,6 +706,8 @@
       autoFetchOnTest,
       moreSettingsCollapsed,
       sessionsSidebarCollapsed,
+      studioPanelCollapsed,
+      sessionsPanelCollapsed,
       sessionsPanelMode,
       voiceMode,
       voiceTtsProviderId,
@@ -737,6 +743,8 @@
         autoFetchOnTest,
         moreSettingsCollapsed: moreSettingsCollapsed === true,
         sessionsSidebarCollapsed: sessionsSidebarCollapsed === true,
+        studioPanelCollapsed: studioPanelCollapsed === true,
+        sessionsPanelCollapsed: sessionsPanelCollapsed === true,
         sessionsPanelMode: sessionsPanelMode === "agent" ? "agent" : "chat",
         voiceMode: voiceMode === true,
         voiceTtsProviderId: String(voiceTtsProviderId || ""),
@@ -763,6 +771,67 @@
     }
   }
 
+  let studioMainAnimTimer = 0;
+
+  function animateStudioMainContent({ mode = "switch" } = {}) {
+    const main = labEls.labStudioMain;
+    if (!main) return;
+    const target = mode === "enter" ? main : main.querySelector(".lab-studio-body");
+    if (!target) return;
+    const className = mode === "enter" ? "is-panel-entering" : "is-content-switching";
+    target.classList.remove("is-panel-entering", "is-content-switching");
+    void target.offsetWidth;
+    target.classList.add(className);
+    window.clearTimeout(studioMainAnimTimer);
+    studioMainAnimTimer = window.setTimeout(() => {
+      target.classList.remove("is-panel-entering", "is-content-switching");
+    }, mode === "enter" ? 460 : 380);
+  }
+
+  function revealStudioMainPanel({ animate = true } = {}) {
+    if (labState.studioPanelCollapsed !== true) return false;
+    labState.studioPanelCollapsed = false;
+    syncStudioPanelCollapse();
+    saveLabState();
+    if (animate) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => animateStudioMainContent({ mode: "enter" }));
+      });
+    }
+    return true;
+  }
+
+  function focusStudioProviderItem(providerId) {
+    const btn = labEls.labProviderList?.querySelector(
+      `button[data-provider-id="${CSS.escape(String(providerId || ""))}"]`
+    );
+    btn?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  function syncStudioPanelCollapse() {
+    const collapsed = labState.studioPanelCollapsed === true;
+    labEls.labWorkspace?.classList.toggle("is-studio-main-collapsed", collapsed);
+    labEls.labStudioPanel?.classList.toggle("is-studio-main-collapsed", collapsed);
+    if (labEls.labStudioPanelCollapse) {
+      labEls.labStudioPanelCollapse.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      const label = labEls.labStudioPanelCollapse.querySelector(".lab-studio-panel-collapse-text");
+      if (label) label.textContent = collapsed ? "展开" : "收起";
+      labEls.labStudioPanelCollapse.title = collapsed
+        ? "展开平台配置"
+        : "收起平台配置，对话区占满剩余空间";
+    }
+    if (labEls.labStudioMainReveal) {
+      labEls.labStudioMainReveal.hidden = !collapsed;
+    }
+  }
+
+  function toggleStudioPanelCollapse(collapsed) {
+    const next = typeof collapsed === "boolean" ? collapsed : !labState.studioPanelCollapsed;
+    labState.studioPanelCollapsed = next;
+    syncStudioPanelCollapse();
+    saveLabState();
+  }
+
   function toggleSessionsSidebarCollapse(collapsed) {
     const next = typeof collapsed === "boolean" ? collapsed : !labState.sessionsSidebarCollapsed;
     if (next && isSessionSearchOpen()) toggleSessionSearch(false);
@@ -778,13 +847,12 @@
     const collapsed = labState.moreSettingsCollapsed === true;
     root.classList.toggle("is-collapsed", collapsed);
     const expanded = !collapsed;
-    labEls.labStudioMoreCollapse?.setAttribute("aria-expanded", String(expanded));
     labEls.labStudioMoreExpand?.setAttribute("aria-expanded", String(expanded));
     labEls.labStudioMorePanel?.setAttribute("aria-hidden", collapsed ? "true" : "false");
-    const label = labEls.labStudioMoreCollapse?.querySelector(".lab-studio-more-collapse-text");
-    if (label) label.textContent = collapsed ? "展开" : "收起";
-    if (labEls.labStudioMoreCollapse) {
-      labEls.labStudioMoreCollapse.title = collapsed ? "展开更多设置" : "收起更多设置";
+    if (labEls.labStudioMoreExpand) {
+      labEls.labStudioMoreExpand.title = collapsed
+        ? "点击展开更多设置"
+        : "点击收起更多设置";
     }
   }
 
@@ -827,11 +895,17 @@
   }
 
   function normalizeSessionMode(mode) {
+    if (mode === SESSION_MODE_AGENT) return SESSION_MODE_AGENT;
     return mode === SESSION_MODE_BATTLE ? SESSION_MODE_BATTLE : SESSION_MODE_NORMAL;
   }
 
   function getCurrentSessionModeKey() {
     return normalizeSessionMode(labState.chatMode);
+  }
+
+  function getStorageSessionModeKey() {
+    if (labState.sessionsPanelMode === "agent") return SESSION_MODE_AGENT;
+    return getCurrentSessionModeKey();
   }
 
   function sessionsForMode(mode) {
@@ -846,7 +920,7 @@
     if (!labSessionsState.activeIds) {
       const now = Date.now();
       const normalId = `s-${now}`;
-      labSessionsState.activeIds = { normal: normalId, battle: null };
+      labSessionsState.activeIds = { normal: normalId, battle: null, agent: null };
       labSessionsState.chats[normalId] = {
         title: "",
         messages: [],
@@ -855,7 +929,28 @@
         mode: SESSION_MODE_NORMAL
       };
     }
-    labSessionsState.version = 2;
+    labSessionsState.version = 3;
+    migrateSessionsStateV3(labSessionsState);
+  }
+
+  function migrateSessionsStateV3(state) {
+    if (!state.activeIds) state.activeIds = {};
+    if (!state.activeIds.agent || !state.chats[state.activeIds.agent]) {
+      const now = Date.now();
+      const agentId = `s-agent-${now}`;
+      state.chats[agentId] = {
+        title: "",
+        messages: [],
+        createdAt: now,
+        updatedAt: now,
+        mode: SESSION_MODE_AGENT
+      };
+      state.activeIds.agent = agentId;
+    } else {
+      state.chats[state.activeIds.agent].mode = SESSION_MODE_AGENT;
+    }
+    state.version = 3;
+    return state;
   }
 
   function ensureActiveSessionForMode(mode) {
@@ -874,7 +969,12 @@
     }
 
     const now = Date.now();
-    const id = key === SESSION_MODE_BATTLE ? `s-battle-${now}` : `s-${now}`;
+    const id =
+      key === SESSION_MODE_BATTLE
+        ? `s-battle-${now}`
+        : key === SESSION_MODE_AGENT
+          ? `s-agent-${now}`
+          : `s-${now}`;
     labSessionsState.chats[id] = {
       title: "",
       messages: [],
@@ -888,18 +988,25 @@
   }
 
   function getActiveSessionId() {
-    return ensureActiveSessionForMode(getCurrentSessionModeKey());
+    ensureSessionsStateShape();
+    const key = getStorageSessionModeKey();
+    const activeId = labSessionsState.activeIds[key];
+    if (!activeId) return null;
+    const chat = labSessionsState.chats[activeId];
+    if (!chat) return null;
+    if (normalizeSessionMode(chat.mode || key) !== key) return null;
+    return activeId;
   }
 
   function setActiveSessionId(sessionId) {
     ensureSessionsStateShape();
-    labSessionsState.activeIds[getCurrentSessionModeKey()] = sessionId;
+    labSessionsState.activeIds[getStorageSessionModeKey()] = sessionId;
   }
 
   function migrateSessionsState(raw) {
     if (raw?.version >= 2 && raw.activeIds && raw.chats) {
       migrateSessionTimestamps(raw);
-      return raw;
+      return migrateSessionsStateV3(raw);
     }
 
     const now = Date.now();
@@ -943,27 +1050,21 @@
       };
     }
 
-    const state = {
-      version: 2,
-      activeIds: {
-        normal: normalId,
-        battle: resolvedBattleId
-      },
-      chats
-    };
     migrateSessionTimestamps(state);
-    return state;
+    return migrateSessionsStateV3(state);
   }
 
   function defaultSessionsState() {
     const now = Date.now();
     const normalId = `s-${now}`;
     const battleId = `s-battle-${now + 1}`;
-    return {
-      version: 2,
+    const agentId = `s-agent-${now + 2}`;
+    return migrateSessionsStateV3({
+      version: 3,
       activeIds: {
         normal: normalId,
-        battle: battleId
+        battle: battleId,
+        agent: agentId
       },
       chats: {
         [normalId]: {
@@ -979,9 +1080,16 @@
           createdAt: now + 1,
           updatedAt: now + 1,
           mode: SESSION_MODE_BATTLE
+        },
+        [agentId]: {
+          title: "",
+          messages: [],
+          createdAt: now + 2,
+          updatedAt: now + 2,
+          mode: SESSION_MODE_AGENT
         }
       }
-    };
+    });
   }
 
   function loadLabSessionsState() {
@@ -1012,8 +1120,12 @@
     localStorage.setItem(LAB_SESSIONS_KEY, JSON.stringify(labSessionsState));
   }
 
-  function getActiveSession() {
-    const id = getActiveSessionId();
+  function getActiveSession({ create = false } = {}) {
+    let id = getActiveSessionId();
+    if (!id && create) {
+      id = ensureActiveSessionForMode(getStorageSessionModeKey());
+    }
+    if (!id) return null;
     if (!labSessionsState.chats[id]) {
       const now = Date.now();
       labSessionsState.chats[id] = {
@@ -1021,18 +1133,19 @@
         messages: [],
         createdAt: now,
         updatedAt: now,
-        mode: getCurrentSessionModeKey()
+        mode: getStorageSessionModeKey()
       };
     }
     return labSessionsState.chats[id];
   }
 
   function getActiveSessionMessages() {
-    return getActiveSession().messages;
+    return getActiveSession()?.messages || [];
   }
 
   function syncMessagesToSession() {
-    const session = getActiveSession();
+    const session = getActiveSession({ create: false });
+    if (!session) return;
     const changed = JSON.stringify(session.messages) !== JSON.stringify(labChatMessages);
     session.messages = labChatMessages;
     if (changed) {
@@ -1228,7 +1341,7 @@
         if (text) return text.length > 48 ? `${text.slice(0, 48)}…` : text;
       }
     }
-    return "新对话";
+    return normalizeSessionMode(chat.mode) === SESSION_MODE_AGENT ? "新 Agent 任务" : "新对话";
   }
 
   function syncSessionTitleFromMessages(chat) {
@@ -1897,35 +2010,81 @@
     const mode = labState.sessionsPanelMode === "agent" ? "agent" : "chat";
     labState.sessionsPanelMode = mode;
     const isAgent = mode === "agent";
+    const collapsed = !isAgent && labState.sessionsPanelCollapsed === true;
+    const listHidden = collapsed && !isAgent;
     if (labEls.labSidebarModeChat) {
       labEls.labSidebarModeChat.classList.toggle("is-active", !isAgent);
-      labEls.labSidebarModeChat.setAttribute("aria-expanded", isAgent ? "false" : "true");
+      labEls.labSidebarModeChat.setAttribute("aria-expanded", collapsed ? "false" : "true");
     }
     if (labEls.labSidebarModeAgent) {
       labEls.labSidebarModeAgent.classList.toggle("is-active", isAgent);
       labEls.labSidebarModeAgent.setAttribute("aria-expanded", isAgent ? "true" : "false");
     }
-    if (labEls.labSidebarChatMenu) labEls.labSidebarChatMenu.hidden = isAgent;
-    if (labEls.labSidebarChatListMenu) labEls.labSidebarChatListMenu.hidden = isAgent;
+    if (labEls.labSidebarChatMenu) labEls.labSidebarChatMenu.hidden = isAgent || collapsed;
+    if (labEls.labSidebarChatListMenu) labEls.labSidebarChatListMenu.hidden = listHidden;
     if (labEls.labSidebarAgentMenu) labEls.labSidebarAgentMenu.hidden = !isAgent;
+    if (labEls.labSessionsFoot) labEls.labSessionsFoot.hidden = listHidden;
+    labEls.labChatSessions?.classList.toggle("is-panel-collapsed", listHidden);
+    labEls.labChatLayout?.classList.toggle("is-agent-mode", isAgent);
+    if (labEls.labAgentMySite) labEls.labAgentMySite.hidden = !isAgent;
+    if (isAgent) {
+      void refreshAgentSiteTree({ silent: true });
+      startAgentSiteWatch();
+    } else {
+      stopAgentSiteWatch();
+      labAgentState.sitePreviewOpen = false;
+      if (labEls.labAgentSiteTree) labEls.labAgentSiteTree.innerHTML = "";
+    }
+    if (labEls.labChatToolbar) labEls.labChatToolbar.hidden = false;
+    if (labEls.labChatModeSwitch) labEls.labChatModeSwitch.hidden = isAgent;
+    if (labEls.labVoiceModePanel) labEls.labVoiceModePanel.hidden = isAgent || normalizeChatMode(labState.chatMode) !== "voice";
+    if (isAgent && normalizeChatMode(labState.chatMode) !== "normal") {
+      labState.chatMode = "normal";
+      labState.voiceMode = false;
+      if (!isVoiceMode()) stopVoice();
+    }
+    if (labEls.labChatInput) {
+      labEls.labChatInput.placeholder = isAgent ? "输入项目需求，Agent 会创建文件并打开预览…" : "输入消息…";
+    }
+    if (!isAgent) agentPreviewBootstrapped = false;
+    else if (!agentPreviewBootstrapped) {
+      agentPreviewBootstrapped = true;
+      void loadLatestAgentProject({ silent: true });
+    }
+    syncAgentPreviewUi();
+    syncChatModeUi();
+    renderSessionList();
+    renderChatMessages();
   }
 
   function setSessionsPanelMode(mode, { silent = false } = {}) {
     const next = mode === "agent" ? "agent" : "chat";
-    if (labState.sessionsPanelMode === next) {
-      syncSessionsPanelModeUi();
-      return;
-    }
+    const prev = labState.sessionsPanelMode === "agent" ? "agent" : "chat";
+    if (next !== prev) syncMessagesToSession();
     if (next === "agent") {
       if (isSessionSearchOpen()) toggleSessionSearch(false);
       closeAllSessionMenus();
+      labState.sessionsPanelCollapsed = false;
     }
     labState.sessionsPanelMode = next;
     saveLabState();
+    if (next !== prev) {
+      labChatMessages = getActiveSessionMessages();
+      setLabUsage("");
+    }
     syncSessionsPanelModeUi();
     if (!silent) {
-      setSessionNotice(next === "agent" ? "已切换到 Agent 模式" : "已切换到对话模式", "ok");
+      setSessionNotice(next === "agent" ? "已切换到 Agent Mode（独立会话）" : "已切换到对话模式（独立会话）", "ok");
     }
+  }
+
+  function toggleSessionsPanelCollapse(collapsed) {
+    const next = typeof collapsed === "boolean" ? collapsed : labState.sessionsPanelCollapsed !== true;
+    if (next && isSessionSearchOpen()) toggleSessionSearch(false);
+    if (next) closeAllSessionMenus();
+    labState.sessionsPanelCollapsed = next;
+    syncSessionsPanelModeUi();
+    saveLabState();
   }
 
   function dispatchVoiceModeEvent() {
@@ -1954,10 +2113,10 @@
   function renderSessionList() {
     if (!labEls.labSessionList) return;
     closeAllSessionMenus();
-    const mode = getCurrentSessionModeKey();
+    const mode = getStorageSessionModeKey();
     labEls.labSessionList.setAttribute(
       "aria-label",
-      mode === SESSION_MODE_BATTLE ? "对战对话" : "全部对话"
+      mode === SESSION_MODE_BATTLE ? "对战对话" : mode === SESSION_MODE_AGENT ? "Agent 任务" : "全部对话"
     );
     const entries = sortSessionEntries(sessionsForMode(mode));
     const q = labSessionSearchQuery.trim().toLowerCase();
@@ -1969,11 +2128,10 @@
         })
       : entries;
     if (!filtered.length) {
-      labEls.labSessionList.innerHTML = '<li class="lab-chat-session-empty">无匹配对话</li>';
+      labEls.labSessionList.innerHTML = `<li class="lab-chat-session-empty">${mode === SESSION_MODE_AGENT ? "无 Agent 任务，点击「新 Agent 任务」创建" : "无对话，点击「新聊天」创建"}</li>`;
       return;
     }
-    const onlyOneSession = entries.length <= 1;
-    const sessionMenuAction = onlyOneSession ? "清空对话" : "删除对话";
+    const deleteLabel = mode === SESSION_MODE_AGENT ? "删除任务" : "删除对话";
     labEls.labSessionList.innerHTML = filtered
       .map(([id, chat]) => {
         const active = id === getActiveSessionId();
@@ -2004,7 +2162,7 @@
                   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
                 </button>
                 <div class="lab-chat-session-menu-pop" role="menu" hidden>
-                  <button type="button" role="menuitem" class="lab-chat-session-menu-danger" data-delete-session="${escapeHtml(id)}">${sessionMenuAction}</button>
+                  <button type="button" role="menuitem" class="lab-chat-session-menu-danger" data-delete-session="${escapeHtml(id)}">${deleteLabel}</button>
                 </div>
               </div>
             </div>
@@ -2020,8 +2178,13 @@
 
   function createNewSession() {
     closeAllSessionMenus();
-    const mode = getCurrentSessionModeKey();
-    const id = mode === SESSION_MODE_BATTLE ? `s-battle-${Date.now()}` : `s-${Date.now()}`;
+    const mode = getStorageSessionModeKey();
+    const id =
+      mode === SESSION_MODE_BATTLE
+        ? `s-battle-${Date.now()}`
+        : mode === SESSION_MODE_AGENT
+          ? `s-agent-${Date.now()}`
+          : `s-${Date.now()}`;
     syncMessagesToSession();
     const now = Date.now();
     labSessionsState.chats[id] = {
@@ -2036,13 +2199,19 @@
     saveLabSessionsState();
     renderSessionList();
     renderChatMessages();
-    setSessionNotice(mode === SESSION_MODE_BATTLE ? "已新建对战" : "已新建对话");
+    setSessionNotice(
+      mode === SESSION_MODE_BATTLE
+        ? "已新建对战"
+        : mode === SESSION_MODE_AGENT
+          ? "已新建 Agent 任务"
+          : "已新建对话"
+    );
   }
 
   function switchSession(sessionId) {
     const chat = labSessionsState.chats[sessionId];
     if (!chat || sessionId === getActiveSessionId()) return;
-    if (normalizeSessionMode(chat.mode || SESSION_MODE_NORMAL) !== getCurrentSessionModeKey()) return;
+    if (normalizeSessionMode(chat.mode || SESSION_MODE_NORMAL) !== getStorageSessionModeKey()) return;
     closeAllSessionMenus();
     syncMessagesToSession();
     setActiveSessionId(sessionId);
@@ -2057,54 +2226,43 @@
     const chat = labSessionsState.chats[sessionId];
     if (!chat) return;
     const title = sessionTitle(chat);
-    const mode = getCurrentSessionModeKey();
-    const keys = Object.keys(labSessionsState.chats).filter(
+    const mode = getStorageSessionModeKey();
+    if (normalizeSessionMode(chat.mode || SESSION_MODE_NORMAL) !== mode) return;
+
+    closeAllSessionMenus();
+
+    const modeSessionIds = Object.keys(labSessionsState.chats).filter(
       (id) => normalizeSessionMode(labSessionsState.chats[id]?.mode || SESSION_MODE_NORMAL) === mode
     );
-
-    if (keys.length <= 1) {
-      const now = Date.now();
-      const createdAt = sessionCreatedAt(chat, sessionId) || now;
-      labSessionsState.chats[sessionId] = {
-        title: "",
-        messages: [],
-        createdAt,
-        updatedAt: now,
-        mode
-      };
-      labChatMessages = [];
-      saveLabSessionsState();
-      renderSessionList();
-      renderChatMessages();
-      setLabUsage("");
-      setSessionNotice("已清空当前对话");
-      return;
-    }
-
     const wasActive = getActiveSessionId() === sessionId;
     if (wasActive) syncMessagesToSession();
+
     const orderedBefore = sortSessionEntries(
-      Object.entries(labSessionsState.chats).filter(([id]) => keys.includes(id))
+      modeSessionIds.map((id) => [id, labSessionsState.chats[id]])
     );
     const removedIdx = orderedBefore.findIndex(([id]) => id === sessionId);
-    delete labSessionsState.chats[sessionId];
 
-    if (wasActive) {
+    delete labSessionsState.chats[sessionId];
+    const remainingIds = modeSessionIds.filter((id) => id !== sessionId);
+
+    if (!remainingIds.length) {
+      labSessionsState.activeIds[mode] = null;
+      labChatMessages = [];
+    } else if (wasActive) {
       const remaining = sortSessionEntries(
-        keys
-          .filter((id) => id !== sessionId)
-          .map((id) => [id, labSessionsState.chats[id]])
+        remainingIds.map((id) => [id, labSessionsState.chats[id]])
       );
       const pickIdx = Math.min(Math.max(removedIdx, 0), remaining.length - 1);
-      const nextId = remaining[pickIdx][0];
-      setActiveSessionId(nextId);
+      setActiveSessionId(remaining[pickIdx][0]);
       labChatMessages = getActiveSessionMessages();
-      renderChatMessages();
-      setLabUsage("");
     }
 
     saveLabSessionsState();
     renderSessionList();
+    if (wasActive || !remainingIds.length) {
+      renderChatMessages();
+      setLabUsage("");
+    }
     setSessionNotice(`已删除「${title}」`);
   }
 
@@ -2164,7 +2322,7 @@
     sessionStorage.removeItem("neux-lab-session");
     labState = defaultLabState();
     labSessionsState = defaultSessionsState();
-    ensureActiveSessionForMode(getCurrentSessionModeKey());
+    ensureActiveSessionForMode(getStorageSessionModeKey());
     labChatMessages = getActiveSessionMessages();
     saveLabState();
     saveLabSessionsState();
@@ -2219,6 +2377,2009 @@
 
   let labThinkStepTimer = null;
   let labThinkStepIndex = 0;
+  let labAgentState = {
+    previewUrl: "",
+    title: "",
+    path: "",
+    workspaceId: "",
+    workspaceFiles: [],
+    files: [],
+    logs: [],
+    modelLabel: "",
+    activeFile: "",
+    activeFileContent: "",
+    running: false,
+    turn: 0,
+    maxTurns: 24,
+    currentTool: "",
+    sitePreviewOpen: false
+  };
+  let agentPreviewBootstrapped = false;
+  let arenaRenderTimer = null;
+  let agentSiteProjects = [];
+  let agentSiteExpanded = new Set();
+  let agentSiteRefreshTimer = null;
+  let agentSiteWatchSource = null;
+
+  function isAgentPanelMode() {
+    return labState.sessionsPanelMode === "agent";
+  }
+
+  const AGENT_ARENA_MAX_TURNS = 24;
+  const AGENT_ARENA_TURN_RETRIES = 3;
+
+  const AGENT_TOOL_LABELS = {
+    model_codegen: "模型生成代码",
+    create_folder: "创建文件夹",
+    write_file: "写入文件",
+    append_file: "追加写入",
+    edit_file: "编辑文件",
+    read_file: "读取文件",
+    list_files: "列出文件",
+    delete_file: "删除文件",
+    open_preview: "打开预览",
+    parse: "格式解析",
+    think: "思考中"
+  };
+
+  const AGENT_ARENA_SYSTEM = `You are an autonomous coding agent (Arena / Cursor style).
+Each turn: ONE tool call OR finish. Build incrementally across many turns.
+
+## Response format (IMPORTANT — works with DeepSeek and similar models)
+
+For list_files / read_file / finish — return compact JSON only:
+{"thought":"why","title":"Project title","done":false,"tool":"list_files","path":""}
+
+For write_file / append_file — NEVER put file body inside JSON strings.
+Return JSON header + markdown code block:
+
+{"thought":"create html skeleton","title":"My Shop","done":false,"tool":"write_file","path":"index.html"}
+
+\`\`\`html
+<!DOCTYPE html>
+...full file content...
+\`\`\`
+
+For edit_file — JSON header + patch block:
+
+{"thought":"fix button","done":false,"tool":"edit_file","path":"script.js"}
+
+\`\`\`patch
+---OLD---
+exact old snippet
+---NEW---
+exact new snippet
+\`\`\`
+
+Rules:
+- Implement EXACTLY what the user asked.
+- Vanilla HTML/CSS/JS; must run from index.html.
+- One tool per turn. Prefer write_file skeleton first, then styles.css / script.js, then edit_file fixes.
+- For large files use append_file to add chunks instead of one giant write.
+- delete_file removes a file when needed.
+- For games / interactive demos: NEVER auto-start on page load. Must include visible UI:
+  1) Start screen with a 「开始游戏」 button
+  2) Pause + Stop (or 暂停/停止) buttons during play; pause freezes gameplay, stop returns to start screen
+  3) Game over screen with score + 「重新开始」 button
+  Use a gameState variable (idle | playing | paused | over).
+- When finished: {"thought":"done","done":true,"tool":null}`;
+
+  function inferAgentFileLang(filePath) {
+    const ext = String(filePath || "").split(".").pop()?.toLowerCase() || "";
+    const map = { html: "html", htm: "html", css: "css", js: "javascript", json: "json", md: "markdown" };
+    return map[ext] || "text";
+  }
+
+  function scheduleArenaRender() {
+    if (arenaRenderTimer) return;
+    arenaRenderTimer = window.setTimeout(() => {
+      arenaRenderTimer = null;
+      renderChatMessages();
+      syncAgentPreviewUi();
+    }, 120);
+  }
+
+  function buildLineDiffHtml(oldText, newText) {
+    const oldLines = String(oldText || "").split("\n");
+    const newLines = String(newText || "").split("\n");
+    const rows = [];
+    const max = Math.max(oldLines.length, newLines.length);
+    for (let i = 0; i < max; i += 1) {
+      const o = oldLines[i];
+      const n = newLines[i];
+      if (o === n) {
+        if (o != null) rows.push(`<div class="lab-agent-diff-line lab-agent-diff-line--same"><span>${escapeHtml(o)}</span></div>`);
+      } else {
+        if (o != null) rows.push(`<div class="lab-agent-diff-line lab-agent-diff-line--del"><span>- ${escapeHtml(o)}</span></div>`);
+        if (n != null) rows.push(`<div class="lab-agent-diff-line lab-agent-diff-line--add"><span>+ ${escapeHtml(n)}</span></div>`);
+      }
+    }
+    return rows.join("") || '<div class="lab-agent-diff-empty">无 diff</div>';
+  }
+
+  function buildArenaTraceStep(payload, toolMessage, { state = "done", streamPreview = "" } = {}) {
+    const tool = payload.tool || null;
+    const step = {
+      id: "",
+      kind: "tool",
+      tool: tool || "think",
+      title: tool ? agentToolLabel(tool) : "思考",
+      thought: payload.thought || "",
+      path: payload.path || "",
+      detail: tool
+        ? `${truncateAgentText(payload.thought, 80)}${payload.path ? ` → ${payload.path}` : ""}: ${truncateAgentText(toolMessage, 120)}`
+        : truncateAgentText(payload.thought || streamPreview, 160),
+      state,
+      open: state === "running" || tool === "write_file" || tool === "append_file" || tool === "edit_file",
+      streamPreview
+    };
+    if (tool === "write_file" || tool === "append_file") {
+      step.codeBody = payload.content || "";
+      step.codeLang = inferAgentFileLang(payload.path);
+    }
+    if (tool === "edit_file") {
+      step.diffHtml = buildLineDiffHtml(payload.oldText, payload.newText);
+      step.codeBody = payload.newText || "";
+      step.codeLang = inferAgentFileLang(payload.path);
+    }
+    if (tool === "read_file" || tool === "list_files") {
+      step.readOutput = toolMessage;
+    }
+    return step;
+  }
+
+  const ARENA_PARSE_RETRY_HINT =
+    "Your last reply could not be parsed. For write_file/append_file use: small JSON header (no content field) + markdown code fence with file body. For edit_file use JSON + ```patch block with ---OLD--- / ---NEW---. Return ONLY the header and fence, no extra text.";
+
+  function agentToolLabel(tool) {
+    return AGENT_TOOL_LABELS[tool] || tool || "工具调用";
+  }
+
+  function truncateAgentText(text, max = 160) {
+    const value = String(text || "").trim();
+    if (value.length <= max) return value;
+    return `${value.slice(0, max)}…`;
+  }
+
+  function isAgentAssistantMessage(msg) {
+    return Boolean(msg?.agentTrace || String(msg?.meta || "").includes("Agent Mode"));
+  }
+
+  function initAgentTrace(prompt) {
+    return {
+      mode: "arena",
+      status: "running",
+      prompt: truncateAgentText(prompt, 240),
+      plan: "",
+      planNote: "",
+      path: "",
+      files: [],
+      logs: [],
+      title: "",
+      workspaceFiles: [],
+      steps: [
+        {
+          id: "receive",
+          kind: "phase",
+          title: "接收项目需求",
+          detail: truncateAgentText(prompt, 120) || "已收到需求",
+          state: "done"
+        },
+        {
+          id: "plan",
+          kind: "phase",
+          title: "模型规划",
+          detail: "正在调用模型分析需求并生成实现方案…",
+          state: "running"
+        }
+      ]
+    };
+  }
+
+  function updateAgentTraceStep(trace, id, patch) {
+    if (!trace?.steps) return;
+    const step = trace.steps.find((item) => item.id === id);
+    if (step) Object.assign(step, patch);
+    else trace.steps.push({ id, kind: "phase", title: id, detail: "", state: "pending", ...patch });
+  }
+
+  function pushAgentTraceStep(trace, step) {
+    if (!trace?.steps) trace.steps = [];
+    const existing = trace.steps.findIndex((item) => item.id === step.id);
+    if (existing >= 0) trace.steps[existing] = { ...trace.steps[existing], ...step };
+    else trace.steps.push(step);
+  }
+
+  function buildAgentTraceStepsFromResult(result, { plan = "", planNote = "" } = {}) {
+    const steps = [
+      {
+        id: "receive",
+        kind: "phase",
+        title: "接收项目需求",
+        detail: truncateAgentText(result.prompt || planNote || "项目需求", 120),
+        state: "done"
+      },
+      {
+        id: "plan",
+        kind: "phase",
+        title: "模型规划",
+        detail: planNote || "规划完成",
+        state: "done",
+        planText: plan || result.plan || ""
+      }
+    ];
+    if (result.path) {
+      steps.push({
+        id: "workspace",
+        kind: "phase",
+        title: "创建工作区",
+        detail: result.path,
+        state: "done"
+      });
+    }
+    (result.logs || []).forEach((log, index) => {
+      steps.push({
+        id: `tool-${log.tool}-${index}`,
+        kind: "tool",
+        tool: log.tool,
+        title: agentToolLabel(log.tool),
+        detail: log.message || "",
+        state: log.type === "ok" ? "done" : "error"
+      });
+    });
+    const fileItems = (result.files || [])
+      .filter((file) => file.type === "file")
+      .map((file) => file.path || file.name || "")
+      .filter(Boolean);
+    if (fileItems.length) {
+      steps.push({
+        id: "files",
+        kind: "files",
+        title: "工作区文件",
+        detail: `共 ${fileItems.length} 个文件`,
+        state: "done",
+        items: fileItems
+      });
+    }
+    if (result.previewUrl) {
+      steps.push({
+        id: "preview",
+        kind: "phase",
+        title: "生成预览",
+        detail: result.previewUrl,
+        state: "done"
+      });
+    }
+    return steps;
+  }
+
+  function buildAgentTraceFromResult(result, existing = null) {
+    const plan = result.plan || existing?.plan || "";
+    const planNote = existing?.planNote || (plan ? "模型规划完成" : "使用本地 Agent 规则执行");
+    return {
+      status: existing?.status === "error" ? "error" : "done",
+      prompt: existing?.prompt || truncateAgentText(result.prompt, 240),
+      plan,
+      planNote,
+      path: result.path || "",
+      files: result.files || [],
+      logs: result.logs || [],
+      title: result.title || result.name || "",
+      steps: buildAgentTraceStepsFromResult(result, { plan, planNote })
+    };
+  }
+
+  function finalizeAgentTraceFromResult(trace, result, { plan = "", planNote = "" } = {}) {
+    if (!trace) return;
+    if (trace.mode === "arena") {
+      trace.status = "done";
+      trace.plan = plan || result.plan || trace.plan || "";
+      trace.planNote = planNote || trace.planNote || "";
+      trace.path = result.path || trace.path || "";
+      trace.files = result.files || [];
+      trace.logs = result.logs || trace.logs || [];
+      trace.title = result.title || result.name || trace.title || "";
+      updateAgentTraceStep(trace, "arena-loop", {
+        state: "done",
+        detail: `共 ${trace.logs.length} 次工具调用`
+      });
+      if (!trace.steps.some((s) => s.id === "preview")) {
+        pushAgentTraceStep(trace, {
+          id: "preview",
+          kind: "phase",
+          title: "生成预览",
+          detail: result.previewUrl || "",
+          state: "done"
+        });
+      }
+      const fileItems = (trace.workspaceFiles || []).filter(Boolean);
+      if (fileItems.length && !trace.steps.some((s) => s.id === "files")) {
+        pushAgentTraceStep(trace, {
+          id: "files",
+          kind: "files",
+          title: "工作区文件",
+          detail: `共 ${fileItems.length} 个文件`,
+          state: "done",
+          items: fileItems
+        });
+      }
+      return;
+    }
+    trace.status = "done";
+    trace.plan = plan || result.plan || trace.plan || "";
+    trace.planNote = planNote || trace.planNote || "";
+    trace.path = result.path || "";
+    trace.files = result.files || [];
+    trace.logs = result.logs || [];
+    trace.title = result.title || result.name || trace.title || "";
+    trace.steps = buildAgentTraceStepsFromResult(
+      { ...result, prompt: trace.prompt },
+      { plan: trace.plan, planNote: trace.planNote }
+    );
+  }
+
+  function normalizeArenaTool(tool) {
+    const key = String(tool || "")
+      .trim()
+      .toLowerCase()
+      .replace(/-/g, "_");
+    const aliases = {
+      writefile: "write_file",
+      appendfile: "append_file",
+      editfile: "edit_file",
+      readfile: "read_file",
+      listfiles: "list_files"
+    };
+    return aliases[key] || key;
+  }
+
+  function extractBalancedJson(text) {
+    const start = text.indexOf("{");
+    if (start < 0) return null;
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let i = start; i < text.length; i += 1) {
+      const ch = text[i];
+      if (inString) {
+        if (escape) escape = false;
+        else if (ch === "\\") escape = true;
+        else if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === "{") depth += 1;
+      if (ch === "}") {
+        depth -= 1;
+        if (depth === 0) return text.slice(start, i + 1);
+      }
+    }
+    return null;
+  }
+
+  function parseEditPatchBody(body) {
+    const text = String(body || "").trim();
+    if (!text) return { oldText: "", newText: "" };
+    const patterns = [
+      /---\s*OLD\s*---\r?\n([\s\S]*?)\r?\n---\s*NEW\s*---\r?\n([\s\S]*)/i,
+      /<<<<<<<\s*OLD\r?\n([\s\S]*?)\r?\n=======\r?\n([\s\S]*?)(?:\r?\n>>>>>>>\s*NEW)?/i,
+      /<<<<<<<\r?\n([\s\S]*?)\r?\n=======\r?\n([\s\S]*?)(?:\r?\n>>>>>>>)?/i,
+      /\[\[OLD\]\]\r?\n([\s\S]*?)\r?\n\[\[NEW\]\]\r?\n([\s\S]*)/i
+    ];
+    for (const re of patterns) {
+      const match = text.match(re);
+      if (match) return { oldText: match[1], newText: match[2] };
+    }
+    return { oldText: "", newText: text };
+  }
+
+  function extractPatchBodyFromRaw(raw) {
+    const idx = String(raw || "").search(/---\s*OLD\s*---|<<<<<<<|\[\[OLD\]\]/i);
+    if (idx < 0) return null;
+    return String(raw).slice(idx).trim();
+  }
+
+  function extractFenceBody(text, fromIndex = 0) {
+    const slice = text.slice(fromIndex);
+    const closed = slice.match(/```[\w.-]*\r?\n([\s\S]*?)```/);
+    if (closed) return closed[1];
+    const open = slice.match(/```[\w.-]*\r?\n([\s\S]+)$/);
+    return open ? open[1] : null;
+  }
+
+  function extractRawFileBodyAfterJson(raw, jsonStr) {
+    const jsonEnd = raw.indexOf(jsonStr) + jsonStr.length;
+    const rest = raw.slice(jsonEnd).trim();
+    if (!rest) return null;
+    const fenced = extractFenceBody(rest, 0);
+    if (fenced != null && fenced.trim()) return fenced;
+    if (/^<!DOCTYPE/i.test(rest) || /^<html[\s>]/i.test(rest) || /^<canvas[\s>]/i.test(rest)) {
+      return rest;
+    }
+    if (/^(\/\*|@|:root|body\s*\{|html\s*\{|\.\w|#\w)/m.test(rest)) return rest;
+    if (/^(import |export |const |let |var |function |class |\/\/)/m.test(rest)) return rest;
+    if (/---\s*OLD\s*---|<<<<<<<|\[\[OLD\]\]/i.test(rest)) return rest;
+    return null;
+  }
+
+  function pickArenaMetaText(meta, keys) {
+    for (const key of keys) {
+      const value = meta?.[key];
+      if (value != null && String(value).trim()) return String(value);
+    }
+    return "";
+  }
+
+  function buildArenaPayload(meta, body, raw = "") {
+    const rawTool = meta?.tool;
+    const tool =
+      rawTool != null && String(rawTool).trim() && String(rawTool).toLowerCase() !== "null"
+        ? normalizeArenaTool(rawTool)
+        : null;
+    let content = pickArenaMetaText(meta, ["content", "body", "file", "text"]);
+    let oldText = pickArenaMetaText(meta, ["old_text", "oldText", "search", "find", "from"]);
+    let newText = pickArenaMetaText(meta, ["new_text", "newText", "replace", "replacement", "to"]);
+
+    if (body != null && body !== "") {
+      if (tool === "write_file" || tool === "append_file") {
+        content = body;
+      } else if (tool === "edit_file") {
+        const patch = parseEditPatchBody(body);
+        oldText = patch.oldText || oldText;
+        newText = patch.newText || newText;
+      }
+    } else if (tool === "edit_file") {
+      const patchSource = extractPatchBodyFromRaw(raw) || extractFenceBody(raw, 0) || content;
+      if (patchSource) {
+        const patch = parseEditPatchBody(patchSource);
+        oldText = patch.oldText || oldText;
+        newText = patch.newText || newText;
+      }
+    } else if ((tool === "write_file" || tool === "append_file") && content.trim()) {
+      // JSON header may include short content field; keep as fallback
+    } else if ((tool === "write_file" || tool === "append_file") && raw) {
+      const fenced = extractFenceBody(raw, 0);
+      if (fenced != null && fenced.trim()) content = fenced;
+    }
+
+    if ((tool === "write_file" || tool === "append_file") && !content.trim() && raw) {
+      const fenced = extractFenceBody(raw, 0);
+      if (fenced != null && fenced.trim()) content = fenced;
+    }
+
+    return {
+      thought: String(meta?.thought || "").trim(),
+      title: String(meta?.title || "").trim(),
+      done: Boolean(meta?.done),
+      tool,
+      path: String(meta?.path || "").trim().replace(/^\/+/, ""),
+      content,
+      oldText,
+      newText
+    };
+  }
+
+  function splitArenaHeaderAndBody(raw) {
+    const jsonStr = extractBalancedJson(raw);
+    if (!jsonStr) return null;
+    let meta;
+    try {
+      meta = JSON.parse(jsonStr);
+    } catch {
+      return null;
+    }
+    const jsonEnd = raw.indexOf(jsonStr) + jsonStr.length;
+    const rest = raw.slice(jsonEnd).trim();
+    if (!rest) return { meta, body: null };
+    const body = extractRawFileBodyAfterJson(raw, jsonStr);
+    if (body == null) return { meta, body: null };
+    return { meta, body };
+  }
+
+  function parseBrokenArenaJsonWithFence(raw) {
+    const toolMatch = raw.match(/"tool"\s*:\s*"([^"]+)"/i);
+    const pathMatch = raw.match(/"path"\s*:\s*"([^"]*)"/i);
+    const thoughtMatch = raw.match(/"thought"\s*:\s*"((?:\\.|[^"\\])*)"/i);
+    const titleMatch = raw.match(/"title"\s*:\s*"((?:\\.|[^"\\])*)"/i);
+    const doneMatch = raw.match(/"done"\s*:\s*(true|false)/i);
+    const fenceBody = extractFenceBody(raw, 0);
+    if (!toolMatch && !doneMatch) return null;
+
+    let thought = "";
+    let title = "";
+    try {
+      if (thoughtMatch) thought = JSON.parse(`"${thoughtMatch[1]}"`);
+      if (titleMatch) title = JSON.parse(`"${titleMatch[1]}"`);
+    } catch {
+      thought = thoughtMatch?.[1] || "";
+      title = titleMatch?.[1] || "";
+    }
+
+    return buildArenaPayload(
+      {
+        thought,
+        title,
+        done: doneMatch ? doneMatch[1] === "true" : false,
+        tool: toolMatch?.[1] || null,
+        path: pathMatch?.[1] || ""
+      },
+      fenceBody,
+      raw
+    );
+  }
+
+  function parseArenaTurnResponse(text) {
+    const raw = String(text || "").trim();
+    if (!raw) throw new Error("模型未返回本步操作");
+
+    const split = splitArenaHeaderAndBody(raw);
+    if (split) {
+      let body = split.body;
+      const tool = normalizeArenaTool(split.meta?.tool);
+      if (body == null && tool === "edit_file") {
+        body = extractPatchBodyFromRaw(raw) || extractFenceBody(raw, 0);
+      }
+      if (body == null && (tool === "write_file" || tool === "append_file")) {
+        body = extractFenceBody(raw, 0);
+      }
+      return buildArenaPayload(split.meta, body, raw);
+    }
+
+    const loose = parseBrokenArenaJsonWithFence(raw);
+    if (loose) return loose;
+
+    try {
+      const data = parseJsonFromModel(raw);
+      return buildArenaPayload(data, extractFenceBody(raw, 0), raw);
+    } catch (err) {
+      throw new Error(err.message || "无法解析模型返回");
+    }
+  }
+
+  function parseJsonFromModel(text) {
+    const raw = String(text || "").trim();
+    try {
+      return JSON.parse(raw);
+    } catch {
+      const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      if (fenced) return JSON.parse(fenced[1].trim());
+      const start = raw.indexOf("{");
+      const end = raw.lastIndexOf("}");
+      if (start < 0 || end <= start) throw new Error("模型返回不是有效 JSON");
+      return JSON.parse(raw.slice(start, end + 1));
+    }
+  }
+
+  function parseArenaTurnPayload(text) {
+    return parseArenaTurnResponse(text);
+  }
+
+  async function fetchArenaTurnContent(messages, validated, signal) {
+    const { baseUrl, apiKey, model, target } = validated;
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: apiHeaders({ apiKey, providerId: target.providerId }),
+      signal,
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: Math.min(0.4, Number(labState.temperature ?? 0.4)),
+        max_tokens: Math.min(8192, Math.max(4096, Number(labState.maxTokens || 8192))),
+        stream: false
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error?.message || data.message || `HTTP ${res.status}`);
+    const content = data.choices?.[0]?.message?.content || "";
+    if (!content.trim()) throw new Error("模型未返回本步操作");
+    return content;
+  }
+
+  async function fetchArenaTurnStream(messages, validated, signal, onPartial) {
+    const { baseUrl, apiKey, model, target } = validated;
+    const useStream = labState.stream !== false;
+    if (!useStream) {
+      const content = await fetchArenaTurnContent(messages, validated, signal);
+      onPartial?.(content);
+      return content;
+    }
+
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: apiHeaders({ apiKey, providerId: target.providerId }),
+      signal,
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: Math.min(0.4, Number(labState.temperature ?? 0.4)),
+        max_tokens: Math.min(8192, Math.max(4096, Number(labState.maxTokens || 8192))),
+        stream: true
+      })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error?.message || data.message || `HTTP ${res.status}`);
+    }
+    const reader = res.body?.getReader();
+    if (!reader) return fetchArenaTurnContent(messages, validated, signal);
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let content = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      buffer = parseSseChunk(buffer, (part) => {
+        if (part.type === "content" && part.text) {
+          content += part.text;
+          onPartial?.(content);
+        }
+      });
+    }
+    if (!content.trim()) throw new Error("模型未返回本步操作");
+    return content;
+  }
+
+  async function requestArenaAgentTurn(messages, validated, signal, trace, turnIndex) {
+    const turnMessages = [...messages];
+    let lastError = null;
+
+    setRunningArenaStep(trace, turnIndex);
+    syncAgentWorkbenchFromTrace(trace, { running: true, turn: turnIndex + 1 });
+    scheduleArenaRender();
+
+    for (let attempt = 0; attempt < AGENT_ARENA_TURN_RETRIES; attempt += 1) {
+      if (attempt > 0) {
+        turnMessages.push({ role: "user", content: ARENA_PARSE_RETRY_HINT });
+      }
+      let content = "";
+      try {
+        content = await fetchArenaTurnStream(turnMessages, validated, signal, (partial) => {
+          updateAgentTraceStep(trace, `turn-${turnIndex}`, {
+            state: "running",
+            detail: truncateAgentText(partial, 220),
+            streamPreview: partial
+          });
+          scheduleArenaRender();
+        });
+        return parseArenaTurnResponse(content);
+      } catch (err) {
+        lastError = err;
+        if (content) turnMessages.push({ role: "assistant", content });
+      }
+    }
+
+    throw new Error(lastError?.message || "模型返回格式无效");
+  }
+
+  function setRunningArenaStep(trace, turnIndex) {
+    pushAgentTraceStep(trace, {
+      ...buildArenaTraceStep({ tool: "think", thought: "", path: "" }, "模型正在思考并选择工具…", {
+        state: "running"
+      }),
+      id: `turn-${turnIndex}`,
+      title: `第 ${turnIndex + 1} 步`,
+      detail: "模型正在思考并选择工具…"
+    });
+    updateAgentTraceStep(trace, "arena-loop", {
+      state: "running",
+      detail: `第 ${turnIndex + 1}/${AGENT_ARENA_MAX_TURNS} 步执行中…`
+    });
+  }
+
+  function appendArenaTraceTurn(trace, turnIndex, payload, toolMessage) {
+    pushAgentTraceStep(trace, {
+      ...buildArenaTraceStep(payload, toolMessage, { state: "done" }),
+      id: `turn-${turnIndex}`
+    });
+  }
+
+  function syncAgentSandboxLayout() {
+    if (labEls.labChatLayout) labEls.labChatLayout.classList.remove("has-agent-sandbox");
+    if (labEls.labAgentWorkbench) {
+      labEls.labAgentWorkbench.hidden = true;
+      labEls.labAgentWorkbench.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  async function fetchAgentWorkspaceFile(workspaceId, filePath) {
+    const res = await fetch(
+      `/api/agent/session/file?workspaceId=${encodeURIComponent(workspaceId)}&path=${encodeURIComponent(filePath)}`
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data.file;
+  }
+
+  async function validateWorkspaceIndexHtml(workspaceId) {
+    try {
+      const file = await fetchAgentWorkspaceFile(workspaceId, "index.html");
+      const text = String(file?.content || "");
+      if (text.trim().length < 80) return { ok: false, reason: "文件过短或为空" };
+      if (!/<\/html>/i.test(text)) return { ok: false, reason: "缺少 </html> 结束标签" };
+      if (/<script\b/i.test(text) && !/<\/script>/i.test(text)) {
+        return { ok: false, reason: "缺少 </script> 结束标签" };
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, reason: "无法读取 index.html" };
+    }
+  }
+
+  const AGENT_HTML_REPAIR_HINT =
+    "index.html 尚未写完（缺少 </html> 或 </script>）。请用 append_file 或 write_file 补全剩余代码，确保页面可独立运行。不要标记 done，直到文件完整。";
+
+  async function agentDoneBlockedByIncompleteHtml(workspaceId) {
+    const check = await validateWorkspaceIndexHtml(workspaceId);
+    return check.ok ? null : check.reason || "页面未完成";
+  }
+
+  async function selectAgentWorkspaceFile(workspaceId, filePath, cachedContent = "") {
+    if (!filePath) return;
+    labAgentState.activeFile = filePath;
+    try {
+      if (cachedContent) labAgentState.activeFileContent = cachedContent;
+      else {
+        const file = await fetchAgentWorkspaceFile(workspaceId, filePath);
+        labAgentState.activeFileContent = file.content;
+      }
+    } catch {
+      labAgentState.activeFileContent = cachedContent || "(无法读取文件)";
+    }
+    syncAgentCodeView();
+  }
+
+  function syncAgentCodeView() {
+    if (labEls.labAgentCodePath) {
+      labEls.labAgentCodePath.textContent = labAgentState.activeFile || "选择文件查看";
+    }
+    if (labEls.labAgentCodeView) {
+      labEls.labAgentCodeView.innerHTML = `<code>${escapeHtml(
+        labAgentState.activeFileContent || "// 点击左侧文件查看内容"
+      )}</code>`;
+    }
+  }
+
+  function syncAgentWorkbenchFromTrace(trace, { running, turn, previewUrl, title, currentTool } = {}) {
+    if (!trace) return;
+    labAgentState.running = running ?? labAgentState.running;
+    labAgentState.turn = turn ?? labAgentState.turn;
+    labAgentState.maxTurns = AGENT_ARENA_MAX_TURNS;
+    labAgentState.workspaceId = trace.workspaceId || labAgentState.workspaceId;
+    labAgentState.path = trace.path || labAgentState.path;
+    labAgentState.workspaceFiles = trace.workspaceFiles || labAgentState.workspaceFiles;
+    labAgentState.logs = trace.logs || labAgentState.logs;
+    labAgentState.title = title || trace.title || labAgentState.title;
+    labAgentState.currentTool = currentTool ?? labAgentState.currentTool;
+    if (trace.workspaceId) ensureAgentSiteExpanded(trace.workspaceId);
+    if (previewUrl) {
+      labAgentState.previewUrl = previewUrl.startsWith("http")
+        ? previewUrl
+        : new URL(previewUrl.startsWith("/") ? previewUrl : `/${previewUrl}`, location.origin).href;
+    }
+    labAgentState.files = (labAgentState.workspaceFiles || []).map((file) => ({
+      type: "file",
+      path: file,
+      name: file
+    }));
+    syncAgentPreviewUi();
+  }
+
+  function refreshArenaLivePreview(assistantMsg, previewPath, title) {
+    if (!previewPath) return;
+    assistantMsg.previewTitle = title || assistantMsg.previewTitle || "生成中…";
+    scheduleArenaRender();
+  }
+
+  async function runArenaAgentLoop(prompt, plan, validated, signal, assistantMsg) {
+    const trace = assistantMsg.agentTrace;
+    const sessionRes = await agentToolRequest("/api/agent/session/start", {
+      prompt,
+      plan,
+      providerName: displayProviderName(validated.creds.provider),
+      model: validated.model
+    });
+    const session = sessionRes.session;
+    trace.path = session.path;
+    trace.workspaceId = session.workspaceId;
+    trace.workspaceFiles = session.files || [];
+    trace.logs = [...(session.logs || [])];
+    trace.title = session.title || trace.title;
+    labAgentState.running = true;
+    labAgentState.maxTurns = AGENT_ARENA_MAX_TURNS;
+    syncAgentWorkbenchFromTrace(trace, {
+      running: true,
+      turn: 0,
+      title: trace.title
+    });
+
+    pushAgentTraceStep(trace, {
+      id: "workspace",
+      kind: "phase",
+      title: "创建工作区",
+      detail: session.path,
+      state: "done"
+    });
+    refreshArenaLivePreview(assistantMsg, null, trace.title);
+    pushAgentTraceStep(trace, {
+      id: "arena-loop",
+      kind: "phase",
+      title: "多轮执行",
+      detail: "模型逐步调用工具编写与修改文件…",
+      state: "running"
+    });
+    renderChatMessages();
+
+    const messages = [
+      { role: "system", content: AGENT_ARENA_SYSTEM },
+      {
+        role: "user",
+        content: `User request:\n${prompt}\n\nImplementation plan:\n${plan || "(no plan)"}\n\nStart by listing files, then build incrementally.`
+      }
+    ];
+
+    let projectTitle = session.title || "Agent 项目";
+    let turnHintIndex = -1;
+
+    for (let turn = 0; turn < AGENT_ARENA_MAX_TURNS; turn += 1) {
+      if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+
+      const fileList = trace.workspaceFiles.length ? trace.workspaceFiles.join(", ") : "(empty)";
+      const turnHint = {
+        role: "user",
+        content:
+          `Workspace files: ${fileList}\n` +
+          `Turn ${turn + 1}/${AGENT_ARENA_MAX_TURNS}.\n` +
+          `For write_file/append_file: JSON header without content + markdown code fence.\n` +
+          `For edit_file: JSON header + \`\`\`patch block with ---OLD--- / ---NEW---.`
+      };
+      if (turnHintIndex >= 0) messages[turnHintIndex] = turnHint;
+      else {
+        messages.push(turnHint);
+        turnHintIndex = messages.length - 1;
+      }
+
+      let payload;
+      try {
+        payload = await requestArenaAgentTurn(messages, validated, signal, trace, turn);
+      } catch (parseErr) {
+        appendArenaTraceStep(
+          trace,
+          turn,
+          { tool: "parse", thought: "格式解析", path: "" },
+          `解析失败（已跳过本步）：${parseErr.message}`
+        );
+        messages.push({
+          role: "user",
+          content: `Parse error: ${parseErr.message}. Resend using JSON header + markdown fence format.`
+        });
+        renderChatMessages();
+        continue;
+      }
+      if (payload.title) projectTitle = payload.title;
+
+      messages.push({
+        role: "assistant",
+        content: payload.content
+          ? `[${payload.tool || "done"} ${payload.path || ""}]\n${truncateAgentText(payload.thought, 120)}`
+          : JSON.stringify({
+              thought: payload.thought,
+              title: payload.title,
+              done: payload.done,
+              tool: payload.tool,
+              path: payload.path
+            })
+      });
+
+      let toolMessage = "";
+      if (payload.done && !payload.tool) {
+        const blockReason = await agentDoneBlockedByIncompleteHtml(session.workspaceId);
+        if (blockReason) {
+          toolMessage = `页面未完成（${blockReason}），继续生成…`;
+          appendArenaTraceTurn(trace, turn, payload, toolMessage);
+          messages.push({ role: "user", content: `${AGENT_HTML_REPAIR_HINT}\n\nProblem: ${blockReason}` });
+          renderChatMessages();
+          continue;
+        }
+        appendArenaTraceTurn(trace, turn, payload, "任务完成");
+        renderChatMessages();
+        break;
+      }
+
+      if (!payload.tool) {
+        toolMessage = "本步无工具调用";
+        appendArenaTraceTurn(trace, turn, payload, toolMessage);
+        renderChatMessages();
+        if (payload.done) break;
+        continue;
+      }
+
+      if (
+        (payload.tool === "write_file" || payload.tool === "append_file") &&
+        !String(payload.content || "").trim()
+      ) {
+        toolMessage =
+          "失败：文件内容为空。请按格式返回 JSON 头 + markdown 代码块（```html / ```css / ```javascript）包含完整文件正文。";
+        trace.logs.push({ type: "error", tool: payload.tool, message: toolMessage });
+        appendArenaTraceTurn(trace, turn, payload, toolMessage);
+        messages.push({
+          role: "user",
+          content: `Tool result (${payload.tool}):\n${toolMessage}`
+        });
+        renderChatMessages();
+        continue;
+      }
+
+      if (payload.tool === "edit_file" && !String(payload.oldText || "").trim()) {
+        toolMessage =
+          "失败：edit_file 缺少 ---OLD--- 片段。请用 JSON 头 + ```patch 代码块，内含 ---OLD--- 与 ---NEW--- 标记的旧/新文本。";
+        trace.logs.push({ type: "error", tool: payload.tool, message: toolMessage });
+        appendArenaTraceTurn(trace, turn, payload, toolMessage);
+        messages.push({
+          role: "user",
+          content: `Tool result (${payload.tool}):\n${toolMessage}`
+        });
+        renderChatMessages();
+        continue;
+      }
+
+      try {
+        const toolRes = await agentToolRequest("/api/agent/session/tool", {
+          workspaceId: session.workspaceId,
+          tool: payload.tool,
+          path: payload.path,
+          content: payload.content,
+          oldText: payload.oldText,
+          newText: payload.newText
+        });
+        toolMessage = toolRes.message || "完成";
+        trace.logs.push(toolRes.log);
+        trace.workspaceFiles = toolRes.files || trace.workspaceFiles;
+      } catch (toolError) {
+        toolMessage = `失败：${toolError.message}`;
+        trace.logs.push({ type: "error", tool: payload.tool, message: toolMessage });
+      }
+      appendArenaTraceTurn(trace, turn, payload, toolMessage);
+      syncAgentWorkbenchFromTrace(trace, {
+        running: true,
+        turn: turn + 1,
+        title: projectTitle,
+        currentTool: payload.tool || ""
+      });
+
+      messages.push({
+        role: "user",
+        content: `Tool result (${payload.tool}):\n${toolMessage}`
+      });
+
+      renderChatMessages();
+      setLabStatus(`Agent 第 ${turn + 1}/${AGENT_ARENA_MAX_TURNS} 步：${agentToolLabel(payload.tool)}`, "ok");
+
+      if (payload.done) {
+        const blockReason = await agentDoneBlockedByIncompleteHtml(session.workspaceId);
+        if (blockReason) {
+          messages.push({ role: "user", content: `${AGENT_HTML_REPAIR_HINT}\n\nProblem: ${blockReason}` });
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (!trace.workspaceFiles.includes("index.html")) {
+      throw new Error("多轮执行结束但缺少 index.html，请重试或增加步数");
+    }
+
+    const finalHtmlCheck = await validateWorkspaceIndexHtml(session.workspaceId);
+    if (!finalHtmlCheck.ok) {
+      throw new Error(`index.html 未完整生成（${finalHtmlCheck.reason}）。请重试或换更大上下文的模型。`);
+    }
+
+    updateAgentTraceStep(trace, "arena-loop", {
+      state: "done",
+      detail: `共 ${trace.logs.length} 次工具调用`
+    });
+    labAgentState.running = false;
+    syncAgentWorkbenchFromTrace(trace, { running: false, title: projectTitle, previewUrl: session.previewUrl });
+
+    const resultRes = await agentToolRequest("/api/agent/session/finish", {
+      workspaceId: session.workspaceId,
+      title: projectTitle,
+      prompt,
+      plan,
+      logs: trace.logs,
+      providerName: displayProviderName(validated.creds.provider),
+      model: validated.model
+    });
+
+    return resultRes.result;
+  }
+
+  function renderAgentTraceStepIcon(step) {
+    if (step.state === "running") {
+      return `<span class="lab-agent-trace-step-icon lab-agent-trace-step-icon--spin" aria-hidden="true"></span>`;
+    }
+    if (step.state === "error") {
+      return `<span class="lab-agent-trace-step-icon lab-agent-trace-step-icon--error" aria-hidden="true">×</span>`;
+    }
+    if (step.state === "done") {
+      return `<span class="lab-agent-trace-step-icon lab-agent-trace-step-icon--done" aria-hidden="true">✓</span>`;
+    }
+    return `<span class="lab-agent-trace-step-icon" aria-hidden="true">○</span>`;
+  }
+
+  function renderAgentTraceStepBody(step) {
+    const thoughtBlock = step.thought
+      ? `<details class="lab-agent-trace-thought"${step.open ? " open" : ""}>
+          <summary>思考</summary>
+          <p>${escapeHtml(step.thought)}</p>
+        </details>`
+      : "";
+    const streamBlock =
+      step.state === "running" && step.streamPreview
+        ? `<pre class="lab-agent-trace-stream">${escapeHtml(truncateAgentText(step.streamPreview, 1200))}</pre>`
+        : "";
+    const codeBlock =
+      step.codeBody && step.tool !== "edit_file"
+        ? `<details class="lab-agent-trace-code"${step.open ? " open" : ""}>
+            <summary>${escapeHtml(step.path || "文件内容")}</summary>
+            <pre><code>${escapeHtml(truncateAgentText(step.codeBody, 8000))}</code></pre>
+          </details>`
+        : "";
+    const diffBlock = step.diffHtml
+      ? `<details class="lab-agent-trace-diff"${step.open ? " open" : ""}>
+          <summary>Diff · ${escapeHtml(step.path || "")}</summary>
+          <div class="lab-agent-diff">${step.diffHtml}</div>
+        </details>`
+      : "";
+    const readBlock = step.readOutput
+      ? `<details class="lab-agent-trace-read"${step.open ? " open" : ""}>
+          <summary>读取结果</summary>
+          <pre><code>${escapeHtml(truncateAgentText(step.readOutput, 6000))}</code></pre>
+        </details>`
+      : "";
+    return `${thoughtBlock}${streamBlock}${codeBlock}${diffBlock}${readBlock}`;
+  }
+
+  function renderAgentTracePanel(msg) {
+    const trace = msg.agentTrace;
+    if (!trace) return "";
+    const statusLabel =
+      trace.status === "running" ? "执行中" : trace.status === "error" ? "失败" : "已完成";
+    const turnSteps = (trace.steps || []).filter((s) => String(s.id || "").startsWith("turn-"));
+    const turnLabel =
+      trace.status === "running"
+        ? `<span class="lab-agent-trace-turns">${turnSteps.length} / ${AGENT_ARENA_MAX_TURNS}</span>`
+        : "";
+    const stepsHtml = (trace.steps || [])
+      .map((step) => {
+        const planBlock =
+          step.planText && step.id === "plan"
+            ? `<details class="lab-agent-trace-plan" open>
+                <summary>查看规划全文</summary>
+                <pre>${escapeHtml(step.planText)}</pre>
+              </details>`
+            : "";
+        const filesBlock =
+          step.kind === "files" && step.items?.length
+            ? `<ul class="lab-agent-trace-files">${step.items
+                .map(
+                  (item) =>
+                    `<li><span class="lab-agent-trace-file-icon" aria-hidden="true">◆</span><code>${escapeHtml(item)}</code></li>`
+                )
+                .join("")}</ul>`
+            : "";
+        const pathTag = step.path
+          ? `<code class="lab-agent-trace-path-tag">${escapeHtml(step.path)}</code>`
+          : "";
+        return `
+          <li class="lab-agent-trace-step lab-agent-trace-step--${escapeHtml(step.state || "pending")}" data-step-kind="${escapeHtml(step.kind || "phase")}" data-step-id="${escapeHtml(step.id || "")}">
+            ${renderAgentTraceStepIcon(step)}
+            <div class="lab-agent-trace-step-copy">
+              <div class="lab-agent-trace-step-head">
+                <strong>${escapeHtml(step.title || "")}</strong>
+                ${step.tool ? `<span class="lab-agent-trace-tool-tag">${escapeHtml(agentToolLabel(step.tool))}</span>` : ""}
+                ${pathTag}
+              </div>
+              ${step.detail ? `<p class="lab-agent-trace-step-detail">${escapeHtml(step.detail)}</p>` : ""}
+              ${renderAgentTraceStepBody(step)}
+              ${planBlock}
+              ${filesBlock}
+            </div>
+          </li>
+        `;
+      })
+      .join("");
+
+    const workspaceMeta = trace.path
+      ? `<p class="lab-agent-trace-meta"><span>工作区</span><code>${escapeHtml(trace.path)}</code></p>`
+      : "";
+
+    return `
+      <section class="lab-agent-trace${msg.streaming ? " is-streaming" : ""}" aria-label="Arena Agent 执行过程" data-agent-trace>
+        <header class="lab-agent-trace-head">
+          <div>
+            <strong>Arena Agent</strong>
+            <span class="lab-agent-trace-status lab-agent-trace-status--${escapeHtml(trace.status || "done")}">${statusLabel}</span>
+            ${turnLabel}
+          </div>
+          ${trace.title ? `<span class="lab-agent-trace-project">${escapeHtml(trace.title)}</span>` : ""}
+        </header>
+        ${workspaceMeta}
+        <ol class="lab-agent-trace-steps">${stepsHtml || '<li class="lab-agent-trace-empty">等待执行…</li>'}</ol>
+      </section>
+    `;
+  }
+
+  function renderAgentToolLog(logs = []) {
+    if (!logs.length) {
+      return '<p class="lab-agent-empty">等待工具调用</p>';
+    }
+    return logs
+      .map(
+        (item, index) => `
+          <p class="lab-agent-tool-line" data-type="${escapeHtml(item.type || "info")}">
+            <span>${String(index + 1).padStart(2, "0")}</span>
+            <strong>${escapeHtml(item.tool || "tool")}</strong>
+            <em>${escapeHtml(item.message || "")}</em>
+          </p>
+        `
+      )
+      .join("");
+  }
+
+  function renderAgentFileTree(files = [], activeFile = "") {
+    if (!files.length) return '<p class="lab-agent-empty">暂无工作区文件</p>';
+    return files
+      .map((file) => {
+        const name = file.name || String(file.path || "").split("/").pop() || "";
+        const active = name === activeFile ? " is-active" : "";
+        return `
+          <button type="button" class="lab-agent-file-row${active}" data-agent-file="${escapeHtml(name)}" data-type="file">
+            <span aria-hidden="true">◆</span>
+            <strong>${escapeHtml(name)}</strong>
+          </button>
+        `;
+      })
+      .join("");
+  }
+
+  const AGENT_SITE_SKIP_FILES = new Set(["agent-manifest.json"]);
+
+  function agentSiteFileIcon(name) {
+    const ext = String(name || "").split(".").pop()?.toLowerCase() || "";
+    if (ext === "html" || ext === "htm") {
+      return `<span class="lab-agent-mysite-icon lab-agent-mysite-icon--html" aria-hidden="true">5</span>`;
+    }
+    if (ext === "css") {
+      return `<span class="lab-agent-mysite-icon lab-agent-mysite-icon--css" aria-hidden="true">#</span>`;
+    }
+    if (ext === "js" || ext === "mjs") {
+      return `<span class="lab-agent-mysite-icon lab-agent-mysite-icon--js" aria-hidden="true">JS</span>`;
+    }
+    return `<span class="lab-agent-mysite-icon" aria-hidden="true">◇</span>`;
+  }
+
+  function projectDisplayTitle(project) {
+    if (!project) return "项目预览";
+    const raw = String(project.title || project.name || "").trim();
+    if (raw && raw !== project.name) return raw;
+    return String(project.name || "project")
+      .replace(/^(agent-|ui-|mini-game-|snake-game-|dino-run-)/i, "")
+      .replace(/-mpx[a-z0-9]+$/i, "")
+      .replace(/-/g, " ")
+      .slice(0, 48);
+  }
+
+  function projectFilesForSiteTree(project) {
+    const wsId = project.name;
+    let paths = [];
+    if (Array.isArray(project.workspaceFiles) && project.workspaceFiles.length) {
+      paths = project.workspaceFiles.slice();
+    } else if (Array.isArray(project.files)) {
+      paths = project.files
+        .filter((item) => item && item.type === "file")
+        .map((item) => {
+          const full = String(item.path || "");
+          if (full.startsWith(`${wsId}/`)) return full.slice(wsId.length + 1);
+          return full.split("/").pop() || full;
+        });
+    }
+    return paths
+      .map((p) => String(p || "").trim())
+      .filter((p) => p && !AGENT_SITE_SKIP_FILES.has(p));
+  }
+
+  function ensureAgentSiteExpanded(workspaceId) {
+    if (!workspaceId) return;
+    agentSiteExpanded.add(workspaceId);
+    if (labAgentState.workspaceId) agentSiteExpanded.add(labAgentState.workspaceId);
+  }
+
+  function renderAgentSiteTreeHtml(projects = agentSiteProjects) {
+    if (!projects.length) {
+      return '<p class="lab-agent-mysite-empty">暂无项目，发送需求后 Agent 会在此列出文件</p>';
+    }
+    return projects
+      .map((project) => {
+        const wsId = project.name;
+        const files = projectFilesForSiteTree(project);
+        const expanded = agentSiteExpanded.has(wsId);
+        const isActiveWs = labAgentState.workspaceId === wsId;
+        const folderActive = isActiveWs ? " is-active" : "";
+        const filesHtml = files.length
+          ? files
+              .map((relPath) => {
+                const name = relPath.split("/").pop() || relPath;
+                const fileActive =
+                  isActiveWs && labAgentState.activeFile === relPath ? " is-active" : "";
+                return `
+                  <button
+                    type="button"
+                    class="lab-agent-mysite-file${fileActive}"
+                    role="treeitem"
+                    data-agent-site-file="${escapeHtml(relPath)}"
+                    data-agent-site-workspace="${escapeHtml(wsId)}"
+                  >
+                    ${agentSiteFileIcon(name)}
+                    <span>${escapeHtml(name)}</span>
+                  </button>
+                `;
+              })
+              .join("")
+          : '<p class="lab-agent-mysite-empty lab-agent-mysite-empty--nested">生成中…</p>';
+        const previewAttr = project.previewUrl
+          ? ` data-agent-site-preview="${escapeHtml(project.previewUrl)}"`
+          : "";
+        const previewActive =
+          isActiveWs && labAgentState.sitePreviewOpen ? " is-active" : "";
+        const actionBtns = `
+          <div class="lab-agent-mysite-actions" role="group" aria-label="${escapeHtml(projectDisplayTitle(project))} 操作">
+            <button type="button" class="lab-agent-mysite-action${previewActive}" data-agent-site-action="preview" data-agent-site-workspace="${escapeHtml(wsId)}" title="预览" aria-label="预览">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+            </button>
+            <button type="button" class="lab-agent-mysite-action" data-agent-site-action="code" data-agent-site-workspace="${escapeHtml(wsId)}" title="浏览代码" aria-label="浏览代码">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0 4.6-4.6-4.6-4.6L14 6l6 6-6 6-1.4-1.4z"/></svg>
+            </button>
+            <button type="button" class="lab-agent-mysite-action" data-agent-site-action="download" data-agent-site-workspace="${escapeHtml(wsId)}" title="下载项目" aria-label="下载项目">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            </button>
+            <button type="button" class="lab-agent-mysite-action lab-agent-mysite-action--danger" data-agent-site-action="delete" data-agent-site-workspace="${escapeHtml(wsId)}" title="删除项目" aria-label="删除项目">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            </button>
+          </div>
+        `;
+        return `
+          <div class="lab-agent-mysite-project${expanded ? " is-expanded" : ""}" role="none">
+            <div class="lab-agent-mysite-folder-row">
+              <button
+                type="button"
+                class="lab-agent-mysite-folder${folderActive}"
+                role="treeitem"
+                aria-expanded="${expanded ? "true" : "false"}"
+                data-agent-site-workspace="${escapeHtml(wsId)}"
+                data-agent-site-title="${escapeHtml(projectDisplayTitle(project))}"
+                ${previewAttr}
+              >
+                <svg class="lab-agent-mysite-chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8.12 9.29 12 13.17l3.88-3.88a1 1 0 1 1 1.42 1.42l-4.59 4.59a1 1 0 0 1-1.42 0L6.7 10.71a1 1 0 0 1 1.42-1.42z"/></svg>
+                <span class="lab-agent-mysite-folder-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M4 6.75A1.75 1.75 0 0 1 5.75 5h4.6l1.4 1.4h9.5A1.75 1.75 0 0 1 21.5 8.15V17.5A1.75 1.75 0 0 1 19.75 19.25H5.75A1.75 1.75 0 0 1 4 17.5V6.75Z"/></svg></span>
+                <span class="lab-agent-mysite-folder-label">${escapeHtml(projectDisplayTitle(project))}</span>
+              </button>
+              ${actionBtns}
+            </div>
+            <div class="lab-agent-mysite-files" role="group">${filesHtml}</div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function paintAgentSiteTree() {
+    if (!labEls.labAgentSiteTree) return;
+    labEls.labAgentSiteTree.innerHTML = renderAgentSiteTreeHtml();
+  }
+
+  function applyAgentSiteProjects(projects) {
+    agentSiteProjects = projects || [];
+    if (!agentSiteExpanded.size && agentSiteProjects[0]?.name) {
+      agentSiteExpanded.add(agentSiteProjects[0].name);
+    }
+    const wsId = labAgentState.workspaceId;
+    if (wsId) {
+      const project = agentSiteProjects.find((p) => p.name === wsId);
+      if (project) {
+        labAgentState.workspaceFiles = projectFilesForSiteTree(project);
+        labAgentState.files = labAgentState.workspaceFiles.map((rel) => ({
+          type: "file",
+          path: rel,
+          name: rel.split("/").pop() || rel
+        }));
+      }
+    }
+    paintAgentSiteTree();
+  }
+
+  function syncAgentSiteCodeFromWorkspaceFiles(workspaceId, files, changedPath = "") {
+    if (agentSiteCodeState.workspaceId !== workspaceId || !labEls.labAgentSiteCodeDialog?.open) return;
+    const prevActive = agentSiteCodeState.activeFile;
+    for (const key of Object.keys(agentSiteCodeState.files)) {
+      if (!files.includes(key)) delete agentSiteCodeState.files[key];
+    }
+    for (const rel of files) {
+      if (!(rel in agentSiteCodeState.files)) agentSiteCodeState.files[rel] = "";
+    }
+    paintAgentSiteCodeFiles();
+    const toRefresh =
+      changedPath && files.includes(changedPath)
+        ? changedPath
+        : prevActive && files.includes(prevActive)
+          ? prevActive
+          : "";
+    if (!toRefresh) return;
+    void fetchAgentWorkspaceFile(workspaceId, toRefresh)
+      .then((file) => {
+        agentSiteCodeState.files[toRefresh] = file.content;
+        showAgentSiteCodeFile(toRefresh);
+      })
+      .catch(() => {});
+  }
+
+  function mergeAgentSiteWorkspaceUpdate(workspaceId, files, changedPath = "") {
+    let project = agentSiteProjects.find((p) => p.name === workspaceId);
+    if (!project) {
+      void refreshAgentSiteTree({ silent: true });
+      return;
+    }
+    project.workspaceFiles = files.slice();
+    const agentRunning = labAgentState.running;
+    if (labAgentState.workspaceId === workspaceId) {
+      labAgentState.workspaceFiles = files.slice();
+      labAgentState.files = files.map((rel) => ({
+        type: "file",
+        path: rel,
+        name: rel.split("/").pop() || rel
+      }));
+      if (
+        (labAgentState.sitePreviewOpen || !agentRunning) &&
+        (!changedPath || changedPath === "index.html" || /\.html?$/i.test(changedPath)) &&
+        files.some((file) => /\.html?$/i.test(file))
+      ) {
+        const htmlFile =
+          changedPath && /\.html?$/i.test(changedPath)
+            ? changedPath
+            : files.includes("index.html")
+              ? "index.html"
+              : files.find((file) => /\.html?$/i.test(file)) || "";
+        const nextPreview = agentProjectPreviewUrl(project, htmlFile);
+        if (nextPreview) {
+          labAgentState.previewUrl = nextPreview;
+          labAgentState.previewRevision = Date.now();
+          syncEmbedBrowserUi({ forceShow: true });
+        }
+      }
+    }
+    paintAgentSiteTree();
+    if (
+      !agentRunning &&
+      changedPath &&
+      labAgentState.workspaceId === workspaceId &&
+      labAgentState.activeFile === changedPath
+    ) {
+      void selectAgentSiteFile(workspaceId, changedPath);
+    }
+    if (!agentRunning) syncAgentSiteCodeFromWorkspaceFiles(workspaceId, files, changedPath);
+  }
+
+  function handleAgentSiteWatchMessage(event) {
+    if (!isAgentPanelMode()) return;
+    try {
+      const payload = JSON.parse(event.data);
+      if (payload.type === "projects") {
+        applyAgentSiteProjects(payload.projects);
+      } else if (payload.type === "workspace" && payload.workspaceId) {
+        mergeAgentSiteWorkspaceUpdate(payload.workspaceId, payload.files || [], payload.changedPath || "");
+      }
+    } catch {
+      // ignore malformed SSE payloads
+    }
+  }
+
+  function stopAgentSiteWatch() {
+    if (!agentSiteWatchSource) return;
+    agentSiteWatchSource.close();
+    agentSiteWatchSource = null;
+  }
+
+  function startAgentSiteWatch() {
+    if (!isAgentPanelMode() || typeof EventSource === "undefined") return;
+    stopAgentSiteWatch();
+    const source = new EventSource("/api/agent/projects/watch");
+    agentSiteWatchSource = source;
+    source.onmessage = handleAgentSiteWatchMessage;
+    source.onerror = () => {
+      if (source.readyState === EventSource.CLOSED) agentSiteWatchSource = null;
+    };
+  }
+
+  async function refreshAgentSiteTree({ silent = false } = {}) {
+    if (!isAgentPanelMode()) return agentSiteProjects;
+    try {
+      const payload = await agentToolRequest("/api/agent/projects");
+      agentSiteProjects = payload.projects || [];
+      if (!agentSiteExpanded.size && agentSiteProjects[0]?.name) {
+        agentSiteExpanded.add(agentSiteProjects[0].name);
+      }
+      paintAgentSiteTree();
+      return agentSiteProjects;
+    } catch (error) {
+      if (!silent && labEls.labAgentSiteTree) {
+        labEls.labAgentSiteTree.innerHTML = `<p class="lab-agent-mysite-empty">加载失败：${escapeHtml(error.message)}</p>`;
+      }
+      return [];
+    }
+  }
+
+  function scheduleAgentSiteRefresh() {
+    if (agentSiteWatchSource && agentSiteWatchSource.readyState === EventSource.OPEN) return;
+    clearTimeout(agentSiteRefreshTimer);
+    agentSiteRefreshTimer = setTimeout(() => {
+      void refreshAgentSiteTree({ silent: true });
+    }, 400);
+  }
+
+  function openAgentSiteProject(project, { focusPreview = true, expandFolder = false } = {}) {
+    if (!project?.name) return;
+    labAgentState.workspaceId = project.name;
+    labAgentState.path = project.path || `agent-workspaces/${project.name}`;
+    labAgentState.title = project.title || projectDisplayTitle(project);
+    labAgentState.workspaceFiles = projectFilesForSiteTree(project);
+    labAgentState.files = labAgentState.workspaceFiles.map((rel) => ({
+      type: "file",
+      path: rel,
+      name: rel.split("/").pop() || rel
+    }));
+    if (expandFolder) agentSiteExpanded.add(project.name);
+    const previewUrl = agentProjectPreviewUrl(project);
+    if (previewUrl) {
+      labAgentState.previewUrl = previewUrl;
+      labAgentState.previewRevision = Date.now();
+    }
+    paintAgentSiteTree();
+    if (focusPreview) {
+      openAgentSitePreview(project);
+    } else if (labAgentState.sitePreviewOpen) {
+      syncEmbedBrowserUi({ forceShow: true });
+    }
+  }
+
+  async function selectAgentSiteFile(workspaceId, filePath) {
+    if (!workspaceId || !filePath) return;
+    const project = agentSiteProjects.find((p) => p.name === workspaceId);
+    if (project) {
+      agentSiteExpanded.add(workspaceId);
+      openAgentSiteProject(project, { focusPreview: false });
+    }
+    labAgentState.activeFile = filePath;
+    const baseName = filePath.split("/").pop() || filePath;
+    if (/\.html?$/i.test(baseName) && project) {
+      openAgentSitePreview(project, { preferredFile: filePath, scrollIntoView: false });
+      return;
+    }
+    try {
+      const file = await fetchAgentWorkspaceFile(workspaceId, filePath);
+      labAgentState.activeFileContent = file.content;
+      if (labEls.labAgentSitePeek) {
+        const preview = file.content.length > 420 ? `${file.content.slice(0, 420)}…` : file.content;
+        labEls.labAgentSitePeek.hidden = false;
+        labEls.labAgentSitePeek.textContent = preview;
+      }
+      paintAgentSiteTree();
+      setLabStatus(`已加载 ${baseName}`, "ok");
+    } catch (error) {
+      setLabStatus(`读取文件失败：${error.message}`, "error");
+    }
+  }
+
+  let agentSiteCodeState = { workspaceId: "", title: "", files: {}, activeFile: "" };
+
+  function agentProjectPreviewUrl(project, preferredFile = "") {
+    if (!project?.name) return "";
+    const files = projectFilesForSiteTree(project);
+    const pickFile = (name) => {
+      if (!name || !files.includes(name)) return "";
+      const segments = name.split("/").filter(Boolean).map((part) => encodeURIComponent(part));
+      return new URL(
+        `/agent-workspaces/${encodeURIComponent(project.name)}/${segments.join("/")}`,
+        location.origin
+      ).href;
+    };
+    if (preferredFile) {
+      const picked = pickFile(preferredFile);
+      if (picked) return picked;
+    }
+    if (files.includes("index.html")) {
+      if (project.previewUrl) {
+        const raw = String(project.previewUrl);
+        return new URL(raw.startsWith("/") ? raw : `/${raw}`, location.origin).href;
+      }
+      return pickFile("index.html");
+    }
+    const htmlFile = files.find((file) => /\.html?$/i.test(file));
+    return htmlFile ? pickFile(htmlFile) : "";
+  }
+
+  function agentSitePreviewPlaceholderText(project) {
+    const files = project ? projectFilesForSiteTree(project) : [];
+    if (!project?.name) return "发送项目需求，生成的网站将在此处全屏预览";
+    if (labAgentState.running) return "Agent 正在生成，完成后将自动在此处预览…";
+    if (!files.length) return "项目尚无文件，发送需求后开始生成…";
+    if (!files.some((file) => /\.html?$/i.test(file))) return "尚未生成 HTML 页面，请等待 Agent 写入 index.html…";
+    return "页面已就绪，正在加载预览…";
+  }
+
+  function resolveAgentPreviewUrl() {
+    const project = agentSiteProjects.find((p) => p.name === labAgentState.workspaceId);
+    const preferredFile =
+      labAgentState.activeFile && /\.html?$/i.test(labAgentState.activeFile)
+        ? labAgentState.activeFile
+        : "";
+    return labAgentState.previewUrl || (project ? agentProjectPreviewUrl(project, preferredFile) : "");
+  }
+
+  function syncEmbedBrowserUi({ forceShow = false } = {}) {
+    const agent = isAgentPanelMode();
+    const project = agentSiteProjects.find((p) => p.name === labAgentState.workspaceId);
+    const previewUrl = resolveAgentPreviewUrl();
+    if (forceShow && previewUrl) labAgentState.sitePreviewOpen = true;
+    const show = agent && (forceShow || labAgentState.sitePreviewOpen);
+    const fullscreenPreview = show && Boolean(previewUrl);
+
+    labEls.labChatLayout?.classList.toggle("has-agent-preview", fullscreenPreview);
+
+    if (!show) {
+      if (labEls.labEmbedBrowser) labEls.labEmbedBrowser.hidden = true;
+      if (labEls.labEmbedBrowserPlaceholder) labEls.labEmbedBrowserPlaceholder.hidden = false;
+      if (labEls.labEmbedBrowserFrame) {
+        labEls.labEmbedBrowserFrame.hidden = true;
+        labEls.labEmbedBrowserFrame.removeAttribute("src");
+      }
+      if (labEls.labEmbedBrowserRefresh) labEls.labEmbedBrowserRefresh.disabled = true;
+      if (labEls.labEmbedBrowserExternal) labEls.labEmbedBrowserExternal.hidden = true;
+      labEls.labEmbedBrowser?.classList.remove("has-preview");
+      return;
+    }
+
+    if (previewUrl) labAgentState.previewUrl = previewUrl;
+    if (labEls.labEmbedBrowser) labEls.labEmbedBrowser.hidden = false;
+    if (labEls.labEmbedBrowserTitle) {
+      labEls.labEmbedBrowserTitle.textContent =
+        labAgentState.title || (project ? projectDisplayTitle(project) : "") || "Agent 项目预览";
+    }
+
+    if (!previewUrl) {
+      labEls.labEmbedBrowser?.classList.remove("has-preview");
+      if (labEls.labEmbedBrowserPlaceholder) {
+        labEls.labEmbedBrowserPlaceholder.hidden = false;
+        const hint = labEls.labEmbedBrowserPlaceholder.querySelector("p");
+        if (hint) hint.textContent = agentSitePreviewPlaceholderText(project);
+      }
+      if (labEls.labEmbedBrowserFrame) {
+        labEls.labEmbedBrowserFrame.hidden = true;
+        labEls.labEmbedBrowserFrame.removeAttribute("src");
+      }
+      if (labEls.labEmbedBrowserRefresh) labEls.labEmbedBrowserRefresh.disabled = true;
+      if (labEls.labEmbedBrowserExternal) labEls.labEmbedBrowserExternal.hidden = true;
+      if (labEls.labEmbedBrowserUrl) labEls.labEmbedBrowserUrl.textContent = "等待生成 HTML 页面…";
+      return;
+    }
+
+    labEls.labEmbedBrowser?.classList.add("has-preview");
+    if (labEls.labEmbedBrowserUrl) labEls.labEmbedBrowserUrl.textContent = previewUrl;
+    if (labEls.labEmbedBrowserExternal) {
+      labEls.labEmbedBrowserExternal.href = previewUrl;
+      labEls.labEmbedBrowserExternal.hidden = false;
+    }
+    if (labEls.labEmbedBrowserRefresh) labEls.labEmbedBrowserRefresh.disabled = false;
+    syncEmbedBrowserFrame(labEls.labEmbedBrowserFrame, previewUrl);
+    if (labEls.labEmbedBrowserPlaceholder) labEls.labEmbedBrowserPlaceholder.hidden = true;
+  }
+
+  function openAgentSitePreview(project, { preferredFile = "", scrollIntoView = false } = {}) {
+    if (!project?.name) return false;
+    labAgentState.sitePreviewOpen = true;
+    labAgentState.workspaceId = project.name;
+    labAgentState.title = project.title || projectDisplayTitle(project);
+    const previewUrl = agentProjectPreviewUrl(project, preferredFile);
+    if (previewUrl) {
+      labAgentState.previewUrl = previewUrl;
+      labAgentState.previewRevision = Date.now();
+    }
+    syncEmbedBrowserUi({ forceShow: true });
+    paintAgentSiteTree();
+    if (previewUrl) {
+      setLabStatus(`已打开预览：${projectDisplayTitle(project)}`, "ok");
+      return true;
+    }
+    setLabStatus(agentSitePreviewPlaceholderText(project), "pending");
+    return false;
+  }
+
+  function closeAgentSitePreview() {
+    labAgentState.sitePreviewOpen = false;
+    syncEmbedBrowserUi();
+    paintAgentSiteTree();
+  }
+
+  async function fetchAgentProjectFileContent(workspaceId, relPath) {
+    try {
+      const file = await fetchAgentWorkspaceFile(workspaceId, relPath);
+      return file.content;
+    } catch {
+      const segments = String(relPath || "")
+        .split("/")
+        .filter(Boolean)
+        .map((part) => encodeURIComponent(part));
+      const url = `/agent-workspaces/${encodeURIComponent(workspaceId)}/${segments.join("/")}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`无法读取 ${relPath}`);
+      return await res.text();
+    }
+  }
+
+  async function loadAgentProjectBundle(workspaceId) {
+    try {
+      const res = await fetch(
+        `/api/agent/project/bundle?workspaceId=${encodeURIComponent(workspaceId)}`
+      );
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok && data.bundle) return data.bundle;
+      if (res.status !== 404 && data.error !== "Unknown Agent API") {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+    } catch (error) {
+      if (error.message && !/Unknown Agent API|HTTP 404/i.test(error.message)) throw error;
+    }
+    const project = agentSiteProjects.find((p) => p.name === workspaceId);
+    if (!project) throw new Error("找不到项目");
+    const paths = projectFilesForSiteTree(project);
+    if (!paths.length) throw new Error("项目没有可下载的文件");
+    const files = {};
+    for (const rel of paths) {
+      files[rel] = await fetchAgentProjectFileContent(workspaceId, rel);
+    }
+    return {
+      workspaceId,
+      title: projectDisplayTitle(project),
+      files
+    };
+  }
+
+  async function importJsZip() {
+    const sources = [
+      "https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm",
+      "https://esm.sh/jszip@3.10.1"
+    ];
+    let lastError;
+    for (const src of sources) {
+      try {
+        const mod = await import(src);
+        return mod.default || mod.JSZip || mod;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError || new Error("无法加载 ZIP 打包库");
+  }
+
+  function paintAgentSiteCodeFiles() {
+    if (!labEls.labAgentSiteCodeFiles) return;
+    const paths = Object.keys(agentSiteCodeState.files).sort();
+    if (!paths.length) {
+      labEls.labAgentSiteCodeFiles.innerHTML = '<p class="lab-agent-mysite-empty">暂无文件</p>';
+      return;
+    }
+    labEls.labAgentSiteCodeFiles.innerHTML = paths
+      .map((relPath) => {
+        const name = relPath.split("/").pop() || relPath;
+        const active = relPath === agentSiteCodeState.activeFile ? " is-active" : "";
+        return `
+          <button type="button" class="lab-agent-mysite-code-file${active}" data-agent-code-file="${escapeHtml(relPath)}">
+            ${agentSiteFileIcon(name)}
+            <span>${escapeHtml(name)}</span>
+          </button>
+        `;
+      })
+      .join("");
+  }
+
+  function showAgentSiteCodeFile(relPath) {
+    if (!relPath || !agentSiteCodeState.files[relPath]) return;
+    agentSiteCodeState.activeFile = relPath;
+    if (labEls.labAgentSiteCodePath) labEls.labAgentSiteCodePath.textContent = relPath;
+    if (labEls.labAgentSiteCodeView) {
+      labEls.labAgentSiteCodeView.innerHTML = `<code>${escapeHtml(agentSiteCodeState.files[relPath])}</code>`;
+    }
+    paintAgentSiteCodeFiles();
+  }
+
+  async function openAgentSiteCodeBrowser(workspaceId) {
+    const project = agentSiteProjects.find((p) => p.name === workspaceId);
+    if (!project || !labEls.labAgentSiteCodeDialog) return;
+    try {
+      setLabStatus("正在加载项目代码…", "pending");
+      const bundle = await loadAgentProjectBundle(workspaceId);
+      agentSiteCodeState = {
+        workspaceId,
+        title: bundle.title || projectDisplayTitle(project),
+        files: bundle.files || {},
+        activeFile: ""
+      };
+      if (labEls.labAgentSiteCodeTitle) {
+        labEls.labAgentSiteCodeTitle.textContent = agentSiteCodeState.title;
+      }
+      const paths = Object.keys(agentSiteCodeState.files);
+      const preferred =
+        paths.find((p) => p === "index.html") ||
+        paths.find((p) => p.endsWith(".html")) ||
+        paths[0] ||
+        "";
+      paintAgentSiteCodeFiles();
+      if (preferred) showAgentSiteCodeFile(preferred);
+      else if (labEls.labAgentSiteCodeView) {
+        labEls.labAgentSiteCodeView.innerHTML = "<code>// 暂无文件</code>";
+      }
+      labEls.labAgentSiteCodeDialog.showModal();
+      setLabStatus("已打开代码浏览器", "ok");
+    } catch (error) {
+      setLabStatus(`加载代码失败：${error.message}`, "error");
+    }
+  }
+
+  function closeAgentSiteCodeBrowser() {
+    labEls.labAgentSiteCodeDialog?.close();
+  }
+
+  async function downloadAgentSiteProject(workspaceId) {
+    const project = agentSiteProjects.find((p) => p.name === workspaceId);
+    if (!project) return;
+    try {
+      setLabStatus("正在打包下载…", "pending");
+      const bundle = await loadAgentProjectBundle(workspaceId);
+      const files = bundle.files || {};
+      const paths = Object.keys(files);
+      if (!paths.length) throw new Error("项目没有可下载的文件");
+
+      if (paths.length === 1) {
+        const only = paths[0];
+        const blob = new Blob([files[only]], { type: "text/plain;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = only.split("/").pop() || only;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        setLabStatus("下载已开始", "ok");
+        return;
+      }
+
+      const JSZip = await importJsZip();
+      const zip = new JSZip();
+      for (const [rel, content] of Object.entries(files)) {
+        zip.file(rel, content);
+      }
+      const blob = await zip.generateAsync({ type: "blob" });
+      const safeName = (bundle.title || workspaceId).replace(/[<>:"/\\|?*]+/g, "-").slice(0, 48);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${safeName || workspaceId}.zip`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setLabStatus("ZIP 下载已开始", "ok");
+    } catch (error) {
+      setLabStatus(`下载失败：${error.message}`, "error");
+    }
+  }
+
+  async function deleteAgentSiteProject(workspaceId) {
+    const project = agentSiteProjects.find((p) => p.name === workspaceId);
+    if (!project) return;
+    const label = projectDisplayTitle(project);
+    if (!window.confirm(`确定删除项目「${label}」？此操作不可恢复。`)) return;
+    try {
+      setLabStatus("正在删除项目…", "pending");
+      const query = `workspaceId=${encodeURIComponent(workspaceId)}`;
+      let res = await fetch(`/api/agent/project?${query}`, { method: "DELETE" });
+      let data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const staleApi = res.status === 404 || data.error === "Unknown Agent API";
+        if (staleApi) {
+          res = await fetch("/api/agent/project/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ workspaceId })
+          });
+          data = await res.json().catch(() => ({}));
+        }
+        if (!res.ok || !data.ok) {
+          if (staleApi && (res.status === 404 || data.error === "Unknown Agent API")) {
+            throw new Error("删除需要重启本地服务：停止当前 node 进程后重新运行 npm start");
+          }
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+      }
+      agentSiteExpanded.delete(workspaceId);
+      if (labAgentState.workspaceId === workspaceId) {
+        labAgentState.workspaceId = "";
+        labAgentState.previewUrl = "";
+        labAgentState.activeFile = "";
+        labAgentState.sitePreviewOpen = false;
+        syncAgentPreviewUi();
+      }
+      await refreshAgentSiteTree();
+      setLabStatus(`已删除 ${label}`, "ok");
+    } catch (error) {
+      setLabStatus(`删除失败：${error.message}`, "error");
+    }
+  }
+
+  function handleAgentSiteAction(action, workspaceId) {
+    const project = agentSiteProjects.find((p) => p.name === workspaceId);
+    if (!project) return;
+    if (action === "preview") {
+      agentSiteExpanded.add(workspaceId);
+      openAgentSiteProject(project, { focusPreview: false, expandFolder: true });
+      if (labAgentState.sitePreviewOpen && labAgentState.workspaceId === workspaceId) {
+        closeAgentSitePreview();
+        return;
+      }
+      openAgentSitePreview(project);
+      return;
+    }
+    if (action === "code") {
+      void openAgentSiteCodeBrowser(workspaceId);
+      return;
+    }
+    if (action === "download") {
+      void downloadAgentSiteProject(workspaceId);
+      return;
+    }
+    if (action === "delete") {
+      void deleteAgentSiteProject(workspaceId);
+    }
+  }
+
+  function onAgentSiteTreeClick(event) {
+    const actionBtn = event.target.closest("[data-agent-site-action]");
+    if (actionBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      handleAgentSiteAction(actionBtn.dataset.agentSiteAction, actionBtn.dataset.agentSiteWorkspace);
+      return;
+    }
+    const codeFileBtn = event.target.closest("[data-agent-code-file]");
+    if (codeFileBtn) {
+      event.preventDefault();
+      showAgentSiteCodeFile(codeFileBtn.dataset.agentCodeFile);
+      return;
+    }
+    const fileBtn = event.target.closest("[data-agent-site-file]");
+    if (fileBtn) {
+      event.preventDefault();
+      void selectAgentSiteFile(fileBtn.dataset.agentSiteWorkspace, fileBtn.dataset.agentSiteFile);
+      return;
+    }
+    const folderBtn = event.target.closest(".lab-agent-mysite-folder");
+    if (!folderBtn) return;
+    event.preventDefault();
+    const wsId = folderBtn.dataset.agentSiteWorkspace;
+    const project = agentSiteProjects.find((p) => p.name === wsId);
+    if (!project) return;
+    const wasExpanded = agentSiteExpanded.has(wsId);
+    if (wasExpanded) {
+      agentSiteExpanded.delete(wsId);
+      paintAgentSiteTree();
+      return;
+    }
+    agentSiteExpanded.add(wsId);
+    openAgentSiteProject(project, { focusPreview: true });
+  }
+
+  function setAgentStateFromResult(result = {}, metaLabel = "", { attachMessage = true } = {}) {
+    const workspaceFiles = (result.files || [])
+      .filter((file) => file.type === "file")
+      .map((file) => String(file.path || "").split("/").pop())
+      .filter(Boolean);
+    labAgentState = {
+      ...labAgentState,
+      previewUrl: result.previewUrl ? new URL(result.previewUrl, location.origin).href : labAgentState.previewUrl,
+      title: result.title || result.name || labAgentState.title || "Agent 项目预览",
+      path: result.path || labAgentState.path,
+      workspaceId: result.name || labAgentState.workspaceId,
+      workspaceFiles: workspaceFiles.length ? workspaceFiles : labAgentState.workspaceFiles,
+      files: workspaceFiles.length
+        ? workspaceFiles.map((name) => ({ type: "file", path: name, name }))
+        : labAgentState.files,
+      logs: result.logs || labAgentState.logs,
+      modelLabel: metaLabel || labAgentState.modelLabel || "",
+      running: false,
+      sitePreviewOpen: Boolean(result.previewUrl) || labAgentState.sitePreviewOpen
+    };
+    if (result.name) ensureAgentSiteExpanded(result.name);
+    if (attachMessage) attachAgentDataToLatestAgentMessage(result);
+    syncAgentPreviewUi();
+    if (attachMessage && isAgentPanelMode()) renderChatMessages();
+  }
+
+  function syncEmbedBrowserFrame(frame, previewUrl = labAgentState.previewUrl) {
+    if (!frame) return;
+    const url = previewUrl
+      ? withPreviewCacheBust(previewUrl, { previewRevision: labAgentState.previewRevision || Date.now() })
+      : "";
+    if (url) {
+      frame.hidden = false;
+      const prev = frame.dataset.previewSrc || "";
+      if (prev !== url) {
+        frame.dataset.previewSrc = url;
+        frame.src = url;
+      }
+      frame.removeAttribute("srcdoc");
+    } else {
+      frame.hidden = true;
+      frame.removeAttribute("src");
+      frame.srcdoc =
+        '<!doctype html><html><body style="margin:0;display:grid;place-items:center;min-height:100vh;background:transparent;color:#71695f;font:14px system-ui">预览将显示在这里</body></html>';
+    }
+  }
+
+  function refreshMessagePreview(index) {
+    const msg = labChatMessages[index];
+    const previewUrl = resolveMessagePreviewUrl(msg);
+    if (!previewUrl) return;
+    const frame = labEls.labChatMessages?.querySelector(`iframe[data-preview-frame="${index}"]`);
+    if (!frame) return;
+    msg.previewRevision = Date.now();
+    frame.src = withPreviewCacheBust(previewUrl, msg);
+  }
+
+  function attachAgentDataToLatestAgentMessage(result = labAgentState) {
+    if (!result.previewUrl && !(result.logs || []).length && !result.path) return;
+    for (let i = labChatMessages.length - 1; i >= 0; i -= 1) {
+      const msg = labChatMessages[i];
+      if (msg.role !== "assistant" || msg.lane) continue;
+      if (result.previewUrl) {
+        msg.previewUrl = new URL(result.previewUrl, location.origin).href;
+        msg.previewTitle = result.title || result.name || msg.previewTitle || "项目预览";
+        msg.previewRevision = Date.now();
+      }
+      if ((result.logs || []).length || result.path) {
+        if (msg.agentTrace?.mode === "arena") {
+          Object.assign(msg.agentTrace, {
+            path: result.path || msg.agentTrace.path,
+            files: result.files || msg.agentTrace.files,
+            logs: result.logs || msg.agentTrace.logs,
+            title: result.title || result.name || msg.agentTrace.title
+          });
+        } else {
+          msg.agentTrace = buildAgentTraceFromResult(result, msg.agentTrace);
+        }
+      }
+      break;
+    }
+  }
+
+  function focusLatestMessagePreview() {
+    const previews = labEls.labChatMessages?.querySelectorAll(".lab-msg-preview");
+    const preview = previews?.length ? previews[previews.length - 1] : null;
+    if (preview) preview.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function syncAgentPreviewUi() {
+    syncAgentSandboxLayout();
+    syncEmbedBrowserUi();
+    if (isAgentPanelMode()) scheduleAgentSiteRefresh();
+  }
 
   function thinkingDurationSec(msg) {
     if (!msg?.thinkingStartedAt) return 0;
@@ -2276,14 +4437,112 @@
     `;
   }
 
+  function shouldShowMessagePreview(msg) {
+    if (!resolveMessagePreviewUrl(msg)) return false;
+    if (isAgentAssistantMessage(msg)) {
+      return !msg.streaming && msg.agentTrace?.status === "done";
+    }
+    return !msg.streaming;
+  }
+
+  function renderAgentPreviewPending() {
+    return `
+      <section class="lab-msg-preview lab-msg-preview--pending" aria-label="预览等待">
+        <p class="lab-msg-preview-pending">代码生成完成后将在此显示预览…</p>
+      </section>
+    `;
+  }
+
+  function remountPreviewFrames() {
+    labEls.labChatMessages?.querySelectorAll(".lab-msg-preview-frame").forEach((frame) => {
+      const base = frame.dataset.previewBase;
+      if (!base) return;
+      const index = Number(frame.dataset.previewFrame);
+      const msg = labChatMessages[index];
+      const nextSrc = withPreviewCacheBust(base, msg || { previewRevision: Date.now() });
+      if (frame.src !== nextSrc) frame.src = nextSrc;
+      else frame.src = "";
+      frame.src = nextSrc;
+    });
+  }
+
+  function resolveMessagePreviewUrl(msg) {
+    const raw = msg?.previewUrl || "";
+    if (!raw) return "";
+    try {
+      return new URL(raw, location.origin).href;
+    } catch {
+      return raw;
+    }
+  }
+
+  function withPreviewCacheBust(url, msg) {
+    if (!url) return "";
+    const revision = msg?.previewRevision || msg?.thinkingEndedAt || Date.now();
+    const joiner = url.includes("?") ? "&" : "?";
+    return `${url}${joiner}v=${encodeURIComponent(String(revision))}`;
+  }
+
+  function renderMessagePreviewEmbed(msg, index) {
+    const previewUrl = resolveMessagePreviewUrl(msg);
+    if (isAgentAssistantMessage(msg) && (msg.streaming || msg.agentTrace?.status === "running")) {
+      return renderAgentPreviewPending();
+    }
+    if (!shouldShowMessagePreview(msg)) return "";
+    const iframeSrc = withPreviewCacheBust(previewUrl, msg);
+    const title = escapeHtml(msg.previewTitle || "项目预览");
+    const safeUrl = escapeHtml(previewUrl);
+    const safeIframeSrc = escapeHtml(iframeSrc);
+    return `
+      <section class="lab-msg-preview" aria-label="项目内嵌预览">
+        <header class="lab-msg-preview-head">
+          <div class="lab-msg-preview-brand">
+            <strong>内嵌预览</strong>
+            <span>${title}</span>
+          </div>
+          <div class="lab-msg-preview-actions">
+            <button
+              type="button"
+              class="lab-msg-preview-btn"
+              data-preview-refresh="${index}"
+              title="刷新预览"
+              aria-label="刷新预览"
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08a5.99 5.99 0 0 1-5.65 4c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            </button>
+            <a class="lab-msg-preview-btn lab-msg-preview-btn--link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">新窗口</a>
+          </div>
+        </header>
+        <p class="lab-msg-preview-url">${safeUrl}</p>
+        <div class="lab-msg-preview-frame-wrap">
+          <iframe
+            class="lab-msg-preview-frame"
+            data-preview-frame="${index}"
+            data-preview-base="${safeUrl}"
+            src="${safeIframeSrc}"
+            title="${title}"
+            loading="eager"
+            referrerpolicy="no-referrer"
+          ></iframe>
+          <p class="lab-msg-preview-hint">点击预览区后可使用键盘或鼠标操作（部分游戏需先点击获取焦点）</p>
+        </div>
+      </section>
+    `;
+  }
+
   function renderAssistantBodyBlock(msg, index, bodyHtml) {
-    const think = renderThinkingPanel(msg);
-    const hasAnswer = Boolean((msg.content || "").trim()) || (!msg.streaming && think);
+    const agentMsg = isAgentAssistantMessage(msg);
+    const think = agentMsg ? "" : renderThinkingPanel(msg);
+    const agentTrace = agentMsg ? renderAgentTracePanel(msg) : "";
+    const hasAnswer = Boolean((msg.content || "").trim()) || (!msg.streaming && (think || agentTrace));
     const answerHidden = msg.streaming && !(msg.content || "").trim();
+    const preview = renderMessagePreviewEmbed(msg, index);
     return `
       <div class="lab-msg-body-wrap">
         ${think}
+        ${agentTrace}
         <div class="lab-msg-body lab-msg-answer${msg.role === "assistant" && !msg.streaming ? " lab-msg-body--md" : ""}${answerHidden ? " is-empty" : ""}"${answerHidden ? ' hidden aria-hidden="true"' : ""}>${bodyHtml}</div>
+        ${preview}
         ${renderAssistantMsgActions(index, msg)}
       </div>
     `;
@@ -2640,9 +4899,11 @@
     updateCustomProviderActions();
   }
 
-  function selectProvider(providerId, { updateUrl = true } = {}) {
+  function selectProvider(providerId, { updateUrl = true, revealPanel = true } = {}) {
     const provider = labProviders.find((item) => item.id === providerId);
     if (!provider) return;
+
+    const shouldReveal = revealPanel && labState.studioPanelCollapsed === true;
 
     if (providerId === labState.providerId) {
       repairProfileOnSwitch(provider);
@@ -2653,6 +4914,8 @@
       renderStudioHead();
       updateCustomProviderActions();
       renderStudioList();
+      if (shouldReveal) revealStudioMainPanel();
+      focusStudioProviderItem(providerId);
       return;
     }
 
@@ -2665,6 +4928,12 @@
     syncLabFormFromState();
     saveLabState();
     if (updateUrl) updateLabUrl(providerId);
+    renderStudioHead();
+    updateCustomProviderActions();
+    renderStudioList();
+    if (shouldReveal) revealStudioMainPanel();
+    else animateStudioMainContent({ mode: "switch" });
+    focusStudioProviderItem(providerId);
     setLabStatus(
       repaired
         ? `已切换至 ${provider.name}，并恢复该平台默认 API（此前误用了其他平台地址）`
@@ -3169,8 +5438,44 @@
     }
   ];
 
+  const LAB_AGENT_STARTERS = [
+    {
+      id: "ui",
+      title: "UI 界面",
+      desc: "生成交互网页与组件界面",
+      prompt: "请用 HTML、CSS、JavaScript 为我生成一个现代化、可交互的 UI 界面，需求如下：",
+      tone: "orange",
+      icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5.75A1.75 1.75 0 0 1 5.75 4h12.5A1.75 1.75 0 0 1 20 5.75v8.5A1.75 1.75 0 0 1 18.25 16H14l-3 2.25V16H5.75A1.75 1.75 0 0 1 4 14.25V5.75Zm2 2h12v6.5H6V7.75Z"/></svg>`
+    },
+    {
+      id: "game",
+      title: "小游戏",
+      desc: "生成可玩的 HTML5 小游戏",
+      prompt: "请为我生成一个可单机游玩的小游戏（尽量用单个 HTML 文件），玩法与风格：",
+      tone: "purple",
+      icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm8 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM6 5.75A1.75 1.75 0 0 1 7.75 4h8.5A1.75 1.75 0 0 1 18 5.75v12.5A1.75 1.75 0 0 1 16.25 19H7.75A1.75 1.75 0 0 1 6 17.25V5.75Zm2.25 3.5v1h3v-1h-3Zm6 5.25v1h3v-1h-3Z"/></svg>`
+    },
+    {
+      id: "landing",
+      title: "落地页",
+      desc: "生成产品或活动宣传页",
+      prompt: "请生成一个完整的产品/活动落地页（含 hero、特性与 CTA），主题是：",
+      tone: "blue",
+      icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 4.5V18h12V8.5H6Z"/></svg>`
+    },
+    {
+      id: "tool",
+      title: "小工具",
+      desc: "生成计算器、转换器等实用页",
+      prompt: "请生成一个可直接在浏览器使用的小工具页面，功能是：",
+      tone: "green",
+      icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.5 3a1.5 1.5 0 0 0-1.5 1.5V5H6.75A1.75 1.75 0 0 0 5 6.75v10.5A1.75 1.75 0 0 0 6.75 19h10.5A1.75 1.75 0 0 0 19 17.25V6.75A1.75 1.75 0 0 0 17.25 5H15V4.5A1.5 1.5 0 0 0 13.5 3h-3Zm-1.5 3h6v1.25H9V6ZM8 9.5h8v7H8v-7Z"/></svg>`
+    }
+  ];
+
   function renderChatStarterCards() {
-    return LAB_CHAT_STARTERS.map(
+    const starters = isAgentPanelMode() ? LAB_AGENT_STARTERS : LAB_CHAT_STARTERS;
+    return starters.map(
       (item) => `
         <button
           type="button"
@@ -3242,13 +5547,17 @@
     const needsKey = !hasAnyPlatformApiKey();
     const needsModel = !hasAnyChatModel();
     const battle = isBattleChatMode();
+    const agent = isAgentPanelMode();
     const subtitle = needsKey
       ? "请先在左侧任一平台填写 API 密钥与地址，或直接选择下方快捷话题开始。"
       : needsModel
         ? "请在平台配置中拉取并勾选启用模型，顶部下拉将按平台分组显示。"
         : battle
           ? "对战模式：同一问题将并排对比两个模型的回复，请在顶部选择两个模型。"
-          : "在顶部选择「平台 · 模型」开始对话，各平台 API 互不影响。";
+          : agent
+            ? "Arena Agent：执行过程、文件步骤与预览都在本条模型回复里，生成完成后向上滚动查看即可。"
+            : "在顶部选择「平台 · 模型」开始对话，各平台 API 互不影响。";
+    const title = battle ? "开始对战" : agent ? "开始生成" : "开始对话";
     return `
       <div class="lab-chat-empty">
         <div class="lab-chat-empty-hero">
@@ -3257,7 +5566,7 @@
               <path d="M7 9h10M7 13h6M5 5.5A2.5 2.5 0 0 1 7.5 3h9A2.5 2.5 0 0 1 19 5.5v9A2.5 2.5 0 0 1 16.5 17H11l-4 3.5V17H7.5A2.5 2.5 0 0 1 5 14.5v-9z" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h3>${battle ? "开始对战" : "开始对话"}</h3>
+          <h3>${title}</h3>
           <p>${subtitle}</p>
         </div>
         <div class="lab-chat-starters" role="list">${renderChatStarterCards()}</div>
@@ -3277,7 +5586,6 @@
         ? ` data-streaming="1" data-streaming-lane="${escapeHtml(msg.lane)}"`
         : ' data-streaming="1"'
       : "";
-    const bodyClass = "";
     const bodyHtml = renderMessageBody(msg);
     const bodyBlock =
       role === "assistant"
@@ -3299,7 +5607,7 @@
     `;
   }
 
-  function renderBattleColWaiting(lane, streaming) {
+  function renderBattleColWaiting(_lane, streaming) {
     if (!streaming) {
       return `<div class="lab-battle-col-wait">等待回复…</div>`;
     }
@@ -3390,12 +5698,15 @@
     labEls.labChatStage?.classList.toggle("is-battle-mode", battleMode);
     if (!labChatMessages.length) {
       labEls.labChatMessages.innerHTML = getChatEmptyHtml();
+      syncAgentPreviewUi();
       return;
     }
     labEls.labChatMessages.innerHTML = battleLayout
       ? renderBattleChatMessagesHtml()
       : renderNormalChatMessagesHtml();
     finishChatMessagesRender();
+    syncAgentPreviewUi();
+    remountPreviewFrames();
   }
 
   function setLabBusy(busy) {
@@ -4028,9 +6339,275 @@
     }
   }
 
+  function parseAgentCodegenPayload(text) {
+    const raw = String(text || "").trim();
+    let data;
+    const tryParse = (source) => JSON.parse(source);
+    try {
+      data = tryParse(raw);
+    } catch {
+      const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      if (fenced) {
+        data = tryParse(fenced[1].trim());
+      } else {
+        const start = raw.indexOf("{");
+        const end = raw.lastIndexOf("}");
+        if (start < 0 || end <= start) throw new Error("模型返回不是有效 JSON");
+        data = tryParse(raw.slice(start, end + 1));
+      }
+    }
+    if (!data?.files || typeof data.files !== "object" || !data.files["index.html"]) {
+      throw new Error("模型 JSON 缺少 files.index.html");
+    }
+    return {
+      title: String(data.title || "模型生成项目").trim(),
+      files: data.files
+    };
+  }
+
+  async function requestAgentCodegen(prompt, plan, validated, signal, { retryHint = "" } = {}) {
+    const { baseUrl, apiKey, model, target } = validated;
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: apiHeaders({ apiKey, providerId: target.providerId }),
+      signal,
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: AGENT_CODEGEN_SYSTEM },
+          {
+            role: "user",
+            content: `User request:\n${prompt}\n\nImplementation plan:\n${plan || "(no plan)"}${retryHint ? `\n\nCorrection:\n${retryHint}` : ""}`
+          }
+        ],
+        temperature: Math.min(0.55, Number(labState.temperature ?? 0.55)),
+        max_tokens: Math.min(12000, Math.max(4096, Number(labState.maxTokens || 8192)))
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error?.message || data.message || `HTTP ${res.status}`);
+    const content = data.choices?.[0]?.message?.content || "";
+    if (!content.trim()) throw new Error("模型未返回代码内容");
+    return parseAgentCodegenPayload(content);
+  }
+
+  async function requestAgentCodegenWithRetry(prompt, plan, validated, signal) {
+    try {
+      return await requestAgentCodegen(prompt, plan, validated, signal);
+    } catch (firstError) {
+      return await requestAgentCodegen(prompt, plan, validated, signal, {
+        retryHint: `Previous response was invalid: ${firstError.message}. Return valid JSON only. Match the user request exactly.`
+      });
+    }
+  }
+
+  async function requestAgentPlan(prompt, validated, signal) {
+    const { baseUrl, apiKey, model, target, creds } = validated;
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: apiHeaders({ apiKey, providerId: target.providerId }),
+      signal,
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an autonomous product engineer (Arena-style). Write a concise plan for a static web project that implements EXACTLY what the user asked — do not swap in a different app or game. Include features, UI, interactions, and files (HTML/CSS/JS). For games: require start screen (开始游戏), pause/stop controls (暂停/停止), and game-over restart — do NOT auto-start on load. Under 200 words."
+          },
+          { role: "user", content: prompt }
+        ],
+        temperature: Math.min(1, Number(labState.temperature ?? 0.7)),
+        max_tokens: Math.min(900, Number(labState.maxTokens || 2048)),
+        stream: false
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error?.message || data.message || `HTTP ${res.status}`);
+    return {
+      text: data.choices?.[0]?.message?.content || "",
+      providerName: displayProviderName(creds.provider)
+    };
+  }
+
+  async function agentToolRequest(path, body) {
+    const res = await fetch(path, {
+      method: body ? "POST" : "GET",
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !payload.ok) throw new Error(payload.error || `HTTP ${res.status}`);
+    return payload;
+  }
+
+  async function loadLatestAgentProject({ silent = false } = {}) {
+    try {
+      const payload = await agentToolRequest("/api/agent/projects");
+      const latest = payload.projects?.[0];
+      if (!latest) {
+        if (!silent) setSessionNotice("还没有 Agent 项目，请先发送项目需求", "error");
+        return null;
+      }
+      setAgentStateFromResult(latest, labAgentState.modelLabel, { attachMessage: false });
+      await refreshAgentSiteTree({ silent: true });
+      return latest;
+    } catch (error) {
+      if (!silent) setSessionNotice(`读取 Agent 工作区失败：${error.message}`, "error");
+      return null;
+    }
+  }
+
+  async function requestAgentReply(prompt, target) {
+    flushActiveProfile();
+    const validated = validateChatTarget(target);
+    if (!validated) return false;
+    const { creds, model } = validated;
+    const metaLabel = `${displayProviderName(creds.provider)} · ${model} · Agent Mode`;
+
+    labState.chatProviderId = target.providerId;
+    labState.chatModelId = target.modelId;
+    creds.profile.selectedModel = model;
+    saveLabState();
+    renderChatModelSelect();
+    labAgentState.modelLabel = metaLabel;
+    syncAgentPreviewUi();
+
+    labAbortController = new AbortController();
+    const signal = labAbortController.signal;
+    const assistantMsg = {
+      role: "assistant",
+      content: "",
+      providerId: target.providerId,
+      modelId: target.modelId,
+      meta: metaLabel,
+      streaming: true,
+      thinkingStartedAt: Date.now(),
+      hadThinking: true,
+      previewUrl: "",
+      agentTrace: initAgentTrace(prompt)
+    };
+    labChatMessages.push(assistantMsg);
+    renderChatMessages();
+    setLabBusy(true);
+    setLabStatus("Arena Agent：规划后多轮改文件…");
+
+    let plan = "";
+    let planNote = "";
+    try {
+      const planned = await requestAgentPlan(prompt, validated, signal);
+      plan = planned.text;
+      planNote = "模型规划完成";
+      assistantMsg.agentTrace.plan = plan;
+      assistantMsg.agentTrace.planNote = planNote;
+      updateAgentTraceStep(assistantMsg.agentTrace, "plan", {
+        state: "done",
+        detail: planNote,
+        planText: plan
+      });
+      renderChatMessages();
+    } catch (error) {
+      planNote = `模型规划未完成，继续生成代码：${error.message}`;
+      assistantMsg.agentTrace.planNote = planNote;
+      updateAgentTraceStep(assistantMsg.agentTrace, "plan", {
+        state: "done",
+        detail: planNote,
+        planText: ""
+      });
+      renderChatMessages();
+    }
+
+    try {
+      const result = await runArenaAgentLoop(prompt, plan, validated, signal, assistantMsg);
+      setAgentStateFromResult(result, metaLabel, { attachMessage: false });
+      delete assistantMsg.streaming;
+      assistantMsg.thinkingEndedAt = Date.now();
+      finalizeAgentTraceFromResult(assistantMsg.agentTrace, result, { plan, planNote });
+      const htmlCheck = await validateWorkspaceIndexHtml(
+        result.name || assistantMsg.agentTrace?.workspaceId || ""
+      );
+      if (htmlCheck.ok && result.previewUrl) {
+        assistantMsg.previewUrl = new URL(result.previewUrl, location.origin).href;
+        assistantMsg.previewTitle = result.title || result.name || "Agent 项目预览";
+        assistantMsg.previewRevision = Date.now();
+      } else {
+        assistantMsg.previewUrl = "";
+        assistantMsg.content =
+          `Arena Agent 已结束，但页面未完整生成（${htmlCheck.reason || "校验失败"}）。\n\n` +
+          `请重新发送需求，或说明「继续补全 index.html」。\n\n` +
+          `- 工作区：${result.path}`;
+        saveLabSession();
+        renderChatMessages();
+        setLabStatus("页面未写完，请重试", "error");
+        return false;
+      }
+      const turnCount = (assistantMsg.agentTrace.logs || []).length;
+      assistantMsg.content =
+        `Arena Agent 已完成。\n\n` +
+        `- 模型：${metaLabel}\n` +
+        `- 工具步数：约 ${turnCount} 次\n` +
+        `- 工作区：${result.path}\n\n` +
+        `执行时间线、文件列表与内嵌预览都在本条回复上方，可展开查看每步思考、代码与 Diff。`;
+      saveLabSession();
+      renderChatMessages();
+      focusLatestMessagePreview();
+      setLabStatus("Arena Agent 已完成", "ok");
+      return true;
+    } catch (error) {
+      labAgentState.running = false;
+      delete assistantMsg.streaming;
+      assistantMsg.thinkingEndedAt = Date.now();
+      if (assistantMsg.agentTrace) {
+        assistantMsg.agentTrace.status = "error";
+        updateAgentTraceStep(assistantMsg.agentTrace, "arena-loop", {
+          state: "error",
+          detail: error.message
+        });
+      }
+      assistantMsg.content =
+        `Arena Agent 失败：${error.message}\n\n` +
+        `请重试、把需求写得更具体，或换上下文更大的模型。本模式不会使用预设游戏模板。`;
+      saveLabSession();
+      renderChatMessages();
+      setLabStatus(`Arena Agent 失败：${error.message}`, "error", { expanded: true });
+      return false;
+    } finally {
+      labAgentState.running = false;
+      syncAgentPreviewUi();
+      stopThinkingStatusTicker();
+      labAbortController = null;
+      setLabBusy(false);
+    }
+  }
+
   async function sendChatMessage() {
     const prompt = labEls.labChatInput?.value?.trim();
     if (!prompt || isChatBusy()) return;
+
+    ensureActiveSessionForMode(getStorageSessionModeKey());
+
+    if (isAgentPanelMode()) {
+      const target = getChatModelTarget();
+      if (!target) {
+        setLabStatus("请先在平台配置中拉取并启用模型，再在顶部选择 Agent 模型", "error");
+        return;
+      }
+      labChatMessages.push({
+        role: "user",
+        content: prompt,
+        providerId: target.providerId,
+        modelId: target.modelId
+      });
+      labEls.labChatInput.value = "";
+      renderChatMessages();
+      const ok = await requestAgentReply(prompt, target);
+      if (!ok && labChatMessages[labChatMessages.length - 1]?.role === "user") {
+        labChatMessages.pop();
+        saveLabSession();
+        renderChatMessages();
+      }
+      return;
+    }
 
     if (isBattleChatMode()) {
       const primaryTarget = getChatModelTarget();
@@ -4140,12 +6717,20 @@
   }
 
   function syncChatModeUi() {
-    const mode = normalizeChatMode(labState.chatMode);
-    labState.chatMode = mode;
-    labState.voiceMode = mode === "voice";
-    labEls.labChatToolbar?.classList.toggle("is-battle-mode", mode === "battle");
-    labEls.labChatToolbar?.classList.toggle("is-normal-mode", mode === "normal");
-    labEls.labChatToolbar?.classList.toggle("is-voice-mode", mode === "voice");
+    const agent = isAgentPanelMode();
+    const mode = agent ? "normal" : normalizeChatMode(labState.chatMode);
+    if (agent) {
+      labState.chatMode = "normal";
+      labState.voiceMode = false;
+    } else {
+      labState.chatMode = mode;
+      labState.voiceMode = mode === "voice";
+    }
+    if (labEls.labChatModeSwitch) labEls.labChatModeSwitch.hidden = agent;
+    if (labEls.labVoiceModePanel) labEls.labVoiceModePanel.hidden = agent || mode !== "voice";
+    labEls.labChatToolbar?.classList.toggle("is-battle-mode", !agent && mode === "battle");
+    labEls.labChatToolbar?.classList.toggle("is-normal-mode", agent || mode === "normal");
+    labEls.labChatToolbar?.classList.toggle("is-voice-mode", !agent && mode === "voice");
     [labEls.labNormalMode, labEls.labBattleMode, labEls.labVoiceMode].forEach((btn) => {
       if (!btn) return;
       const active = btn.dataset.chatMode === mode;
@@ -4180,6 +6765,7 @@
   }
 
   function setChatMode(mode, { silent = false } = {}) {
+    if (isAgentPanelMode()) return;
     const next = normalizeChatMode(mode);
     if (normalizeChatMode(labState.chatMode) === next) {
       syncChatModeUi();
@@ -4367,6 +6953,7 @@
     labEls.labChatSessions = root.querySelector("#labChatSessions");
     labEls.labSessionsCollapse = root.querySelector("#labSessionsCollapse");
     labEls.labSessionsExpand = root.querySelector("#labSessionsExpand");
+    labEls.labSessionsFoot = root.querySelector(".lab-chat-sessions-foot");
     labEls.labSessionList = root.querySelector("#labSessionList");
     labEls.labNewSession = root.querySelector("#labNewSession");
     labEls.labSessionSearchToggle = root.querySelector("#labSessionSearchToggle");
@@ -4378,6 +6965,38 @@
     labEls.labSidebarChatMenu = root.querySelector("#labSidebarChatMenu");
     labEls.labSidebarChatListMenu = root.querySelector("#labSidebarChatListMenu");
     labEls.labSidebarAgentMenu = root.querySelector("#labSidebarAgentMenu");
+    labEls.labAgentMySite = root.querySelector("#labAgentMySite");
+    labEls.labAgentSiteTree = root.querySelector("#labAgentSiteTree");
+    labEls.labAgentSiteRefresh = root.querySelector("#labAgentSiteRefresh");
+    labEls.labAgentSitePeek = root.querySelector("#labAgentSitePeek");
+    labEls.labAgentSiteCodeDialog = root.querySelector("#labAgentSiteCodeDialog");
+    labEls.labAgentSiteCodeTitle = root.querySelector("#labAgentSiteCodeTitle");
+    labEls.labAgentSiteCodeClose = root.querySelector("#labAgentSiteCodeClose");
+    labEls.labAgentSiteCodeFiles = root.querySelector("#labAgentSiteCodeFiles");
+    labEls.labAgentSiteCodePath = root.querySelector("#labAgentSiteCodePath");
+    labEls.labAgentSiteCodeView = root.querySelector("#labAgentSiteCodeView");
+    labEls.labEmbedBrowser = root.querySelector("#labEmbedBrowser");
+    labEls.labEmbedBrowserTitle = root.querySelector("#labEmbedBrowserTitle");
+    labEls.labEmbedBrowserUrl = root.querySelector("#labEmbedBrowserUrl");
+    labEls.labEmbedBrowserFrame = root.querySelector("#labEmbedBrowserFrame");
+    labEls.labEmbedBrowserPlaceholder = root.querySelector("#labEmbedBrowserPlaceholder");
+    labEls.labEmbedBrowserRefresh = root.querySelector("#labEmbedBrowserRefresh");
+    labEls.labEmbedBrowserExternal = root.querySelector("#labEmbedBrowserExternal");
+    labEls.labEmbedBrowserClose = root.querySelector("#labEmbedBrowserClose");
+    labEls.labEmbedBrowserChat = root.querySelector("#labEmbedBrowserChat");
+    labEls.labAgentWorkbench = root.querySelector("#labAgentWorkbench");
+    labEls.labAgentWorkbenchTitle = root.querySelector("#labAgentWorkbenchTitle");
+    labEls.labAgentModelPill = root.querySelector("#labAgentModelPill");
+    labEls.labAgentTurnBadge = root.querySelector("#labAgentTurnBadge");
+    labEls.labAgentRunStatus = root.querySelector("#labAgentRunStatus");
+    labEls.labAgentToolCount = root.querySelector("#labAgentToolCount");
+    labEls.labAgentPreviewFrame = root.querySelector("#labAgentPreviewFrame");
+    labEls.labAgentPreviewOpen = root.querySelector("#labAgentPreviewOpen");
+    labEls.labAgentWorkspacePath = root.querySelector("#labAgentWorkspacePath");
+    labEls.labAgentFileTree = root.querySelector("#labAgentFileTree");
+    labEls.labAgentCodePath = root.querySelector("#labAgentCodePath");
+    labEls.labAgentCodeView = root.querySelector("#labAgentCodeView");
+    labEls.labChatLayout = root.querySelector("#labChatLayout");
     labEls.labSessionNotice = root.querySelector("#labSessionNotice");
     labEls.labExportChat = root.querySelector("#labExportChat");
     labEls.labVoiceModePanel = root.querySelector("#labVoiceModePanel");
@@ -4405,13 +7024,17 @@
     labEls.labVoiceTtsStylePreset = root.querySelector("#labVoiceTtsStylePreset");
     labEls.labVoiceTtsStyle = root.querySelector("#labVoiceTtsStyle");
     labEls.labChatToolbar = root.querySelector("#labChatToolbar");
+    labEls.labChatModeSwitch = root.querySelector(".lab-chat-mode-switch");
     labEls.labChatStage = root.querySelector("#labChatStage");
     labEls.labNormalMode = root.querySelector("#labNormalMode");
     labEls.labBattleMode = root.querySelector("#labBattleMode");
     labEls.labVoiceMode = root.querySelector("#labVoiceMode");
+    labEls.labWorkspace = root.querySelector("#labWorkspace");
+    labEls.labStudioPanelCollapse = root.querySelector("#labStudioPanelCollapse");
+    labEls.labStudioMain = root.querySelector("#labStudioMain");
+    labEls.labStudioMainReveal = root.querySelector("#labStudioMainReveal");
     labEls.labStudioMore = root.querySelector("#labStudioMore");
     labEls.labStudioMorePanel = root.querySelector("#labStudioMorePanel");
-    labEls.labStudioMoreCollapse = root.querySelector("#labStudioMoreCollapse");
     labEls.labStudioMoreExpand = root.querySelector("#labStudioMoreExpand");
   }
 
@@ -4437,11 +7060,11 @@
         case "labClearModelCache":
           clearProviderModelCache();
           return;
-        case "labStudioMoreCollapse":
-          toggleMoreSettingsCollapse();
+        case "labStudioPanelCollapse":
+          toggleStudioPanelCollapse();
           return;
-        case "labStudioMoreExpand":
-          if (labState.moreSettingsCollapsed) toggleMoreSettingsCollapse(false);
+        case "labStudioMainReveal":
+          revealStudioMainPanel();
           return;
         case "labStop":
           stopGeneration();
@@ -4451,7 +7074,9 @@
           saveLabSession();
           renderChatMessages();
           setLabUsage("");
-          setSessionNotice("已清空当前对话");
+          setSessionNotice(
+            isAgentPanelMode() ? "已清空当前 Agent 任务" : "已清空当前对话"
+          );
           return;
         case "labExportConfig": {
           const include = window.confirm(
@@ -4478,17 +7103,46 @@
         case "labNewSession":
           createNewSession();
           return;
+        case "labNewAgentSession":
+          createNewSession();
+          return;
         case "labSessionSearchToggle":
           toggleSessionSearch();
           return;
         case "labSessionSearchClose":
           toggleSessionSearch(false);
           return;
+        case "labStudioMoreExpand":
+          toggleMoreSettingsCollapse();
+          return;
         case "labSidebarModeChat":
-          setSessionsPanelMode("chat");
+          if (labState.sessionsPanelMode === "agent") {
+            setSessionsPanelMode("chat");
+          } else {
+            toggleSessionsPanelCollapse();
+          }
           return;
         case "labSidebarModeAgent":
           setSessionsPanelMode("agent");
+          return;
+        case "labAgentSiteRefresh":
+          void refreshAgentSiteTree();
+          return;
+        case "labAgentSiteCodeClose":
+          closeAgentSiteCodeBrowser();
+          return;
+        case "labEmbedBrowserRefresh":
+          if (labAgentState.previewUrl) {
+            labAgentState.previewRevision = Date.now();
+            syncEmbedBrowserUi({ forceShow: true });
+          }
+          return;
+        case "labEmbedBrowserChat":
+          closeAgentSitePreview();
+          labEls.labChatMessages?.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        case "labEmbedBrowserClose":
+          closeAgentSitePreview();
           return;
         case "labSessionsCollapse":
           toggleSessionsSidebarCollapse(true);
@@ -4634,6 +7288,13 @@
       root.querySelector("#labFetchModels")?.focus();
       return;
     }
+    const previewRefreshBtn = event.target.closest("[data-preview-refresh]");
+    if (previewRefreshBtn) {
+      event.preventDefault();
+      refreshMessagePreview(Number(previewRefreshBtn.dataset.previewRefresh));
+      return;
+    }
+
     const starterBtn = event.target.closest("[data-lab-starter-prompt]");
     if (starterBtn) {
       applyStarterPrompt(starterBtn.dataset.labStarterPrompt || "");
@@ -4809,6 +7470,13 @@
     bindChatModelPickerEvents();
     bindVoicePickerEvents();
     root.addEventListener("click", onLabClick);
+    labEls.labAgentSiteTree?.addEventListener("click", onAgentSiteTreeClick);
+    labEls.labAgentSiteCodeDialog?.addEventListener("click", (event) => {
+      const codeFileBtn = event.target.closest("[data-agent-code-file]");
+      if (!codeFileBtn) return;
+      event.preventDefault();
+      showAgentSiteCodeFile(codeFileBtn.dataset.agentCodeFile);
+    });
     root.addEventListener("change", onLabChange);
     root.addEventListener("input", onLabInput);
     root.addEventListener("submit", onLabSubmit);
@@ -4897,6 +7565,7 @@
     bindLabEvents();
     syncMoreSettingsCollapse();
     syncSessionsSidebarCollapse();
+    syncStudioPanelCollapse();
     syncApiKeyVisibilityUi();
     ensureThinkingPanelBindings();
     setLabBusy(false);
@@ -4917,6 +7586,7 @@
     syncLabFormFromState();
     syncMoreSettingsCollapse();
     syncSessionsSidebarCollapse();
+    syncStudioPanelCollapse();
     syncChatModeUi();
   }
 

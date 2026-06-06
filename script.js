@@ -133,6 +133,10 @@ const CATALOG_URL = "data/catalog.json?v=1";
 const GLOBAL_RANKINGS_URL = "data/global-rankings.json?v=1";
 const SITE_REPO_URL = "https://github.com/useragent-1/AI-";
 
+const PROMPTS_URL = "data/prompts.json?v=3";
+const SKILLS_URL = "data/skills.json?v=6";
+const MCP_URL = "data/mcp.json?v=2";
+
 const RANKING_TOOL_ALIASES = {
   "DeepSeek Chat": "DeepSeek",
   "Chat.OpenAI": "ChatGPT",
@@ -149,6 +153,12 @@ const RANKING_TOOL_ALIASES = {
 };
 
 let globalRankings = null;
+let promptsIndex = [];
+let skillsIndex = [];
+let mcpIndex = [];
+let activePromptCategory = "all";
+let activeSkillCategory = "all";
+let activeMcpCategory = "all";
 
 const state = {
   category: "all",
@@ -230,10 +240,28 @@ const els = {
   heroRecentList: document.querySelector("#heroRecentList"),
   toolsView: document.querySelector("#toolsView"),
   rankingsPage: document.querySelector("#rankings"),
+  promptsPage: document.querySelector("#prompts"),
+  skillsPage: document.querySelector("#skills"),
+  mcpPage: document.querySelector("#mcp"),
   rankingsTableBody: document.querySelector("#rankingsTableBody"),
   rankingsTitle: document.querySelector("#rankingsTitle"),
   rankingsLead: document.querySelector("#rankingsLead"),
   rankingsEyebrow: document.querySelector("#rankingsEyebrow"),
+  promptsGrid: document.querySelector("#promptsGrid"),
+  promptsHeading: document.querySelector("#promptsHeading"),
+  promptsMeta: document.querySelector("#promptsMeta"),
+  promptsCategories: document.querySelector("#promptsCategories"),
+  promptsSearch: document.querySelector("#promptsSearch"),
+  skillsGrid: document.querySelector("#skillsGrid"),
+  skillsHeading: document.querySelector("#skillsHeading"),
+  skillsMeta: document.querySelector("#skillsMeta"),
+  skillsCategories: document.querySelector("#skillsCategories"),
+  skillsSearch: document.querySelector("#skillsSearch"),
+  mcpGrid: document.querySelector("#mcpGrid"),
+  mcpHeading: document.querySelector("#mcpHeading"),
+  mcpMeta: document.querySelector("#mcpMeta"),
+  mcpCategories: document.querySelector("#mcpCategories"),
+  mcpSearch: document.querySelector("#mcpSearch"),
   labPage: document.querySelector("#lab"),
   insightRail: document.querySelector("#insightRail"),
   resultTitle: document.querySelector("#resultTitle"),
@@ -269,14 +297,21 @@ const els = {
   comparePanel: document.querySelector("#comparePanel"),
   compareClose: document.querySelector("#compareClose"),
   catalogUpdated: document.querySelector("#catalogUpdated"),
-  topNav: document.querySelector(".top-nav")
+  topNav: document.querySelector(".top-nav"),
+  topNavDirectoryGroup: document.querySelector('[data-nav-group="directory"]'),
+  topNavDirectoryMenu: document.querySelector('[data-nav-group="directory"] .top-nav-menu'),
+  topNavDirectoryTrigger: document.querySelector('[data-nav-group="directory"] .top-nav-trigger')
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   bootstrap().catch((error) => {
     console.error(error);
-    if (els.heroLead) els.heroLead.textContent = "工具库加载失败，请刷新页面重试。";
-    if (els.appLoading) els.appLoading.textContent = "加载失败";
+    const isFilePage = location.protocol === "file:";
+    const message = isFilePage
+      ? "请通过本地服务打开页面：运行 npm start 后访问 http://127.0.0.1:3000"
+      : `加载失败：${error.message || "请刷新页面重试"}`;
+    if (els.heroLead) els.heroLead.textContent = message;
+    if (els.appLoading) els.appLoading.textContent = message;
   });
 });
 
@@ -284,6 +319,12 @@ async function bootstrap() {
   const payload = await loadCatalog();
   catalogGeneratedAt = payload.generatedAt || "";
   buildCatalogIndex();
+  [promptsIndex, skillsIndex, mcpIndex] = await Promise.all([
+    loadJsonIndex(PROMPTS_URL),
+    loadJsonIndex(SKILLS_URL),
+    loadJsonIndex(MCP_URL)
+  ]);
+
   await Promise.all([loadGlobalRankings(), loadLabToolMapForDirectory()]);
   readStateFromURL();
   applyStateToControls();
@@ -301,6 +342,7 @@ async function bootstrap() {
   initHeroPlaceholder();
   renderRecentSearches();
   renderGlobalRankings();
+  bindDocPageEvents();
   initAppNav();
   const initialView = getViewFromHash();
   if (initialView === "lab") {
@@ -331,6 +373,220 @@ async function loadCatalog() {
   const payload = await response.json();
   categorySeeds = payload.categories || [];
   return payload;
+}
+
+async function loadJsonIndex(url, fallback = []) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return fallback;
+    const text = (await response.text()).replace(/^\uFEFF/, "").trim();
+    if (!text) return fallback;
+    const payload = JSON.parse(text);
+    return payload.items || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function matchesQuery(item, query) {
+  if (!query) return true;
+  const q = normalize(query);
+  const tags = Array.isArray(item.tags) ? item.tags.join(" ") : "";
+  const links = Array.isArray(item.links) ? item.links.map((link) => `${link.label || ""} ${link.url || ""}`).join(" ") : "";
+  const hay = normalize(`${item.title || ""} ${item.description || ""} ${item.howTo || ""} ${item.prompt || ""} ${item.installType || ""} ${item.downloadNeeded || ""} ${item.installCommand || ""} ${item.remoteUrl || ""} ${item.configHint || ""} ${tags} ${links}`);
+  return hay.includes(q);
+}
+
+function getPromptCategory(item) {
+  return Array.isArray(item.tags) && item.tags[0] ? item.tags[0] : "未分类";
+}
+
+function getDocCategory(item) {
+  return Array.isArray(item.tags) && item.tags[0] ? item.tags[0] : "未分类";
+}
+
+function getDocCategoryStats(items) {
+  const counts = new Map();
+  items.forEach((item) => {
+    const category = getDocCategory(item);
+    counts.set(category, (counts.get(category) || 0) + 1);
+  });
+  return [...counts.entries()].sort((a, b) => {
+    const aHot = a[0].startsWith("热门");
+    const bHot = b[0].startsWith("热门");
+    if (aHot !== bHot) return aHot ? -1 : 1;
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return a[0].localeCompare(b[0], "zh-Hans-CN");
+  });
+}
+
+function renderPromptCategories() {
+  if (!els.promptsCategories) return;
+  const stats = getDocCategoryStats(promptsIndex);
+  const buttons = [
+    { category: "all", label: "全部", count: promptsIndex.length },
+    ...stats.map(([category, count]) => ({ category, label: category, count }))
+  ];
+  els.promptsCategories.innerHTML = buttons.map(({ category, label, count }) => `
+    <button
+      type="button"
+      class="prompt-category-chip${activePromptCategory === category ? " active" : ""}"
+      data-prompt-category="${escapeHtml(category)}"
+      aria-pressed="${activePromptCategory === category ? "true" : "false"}"
+    >
+      <span>${escapeHtml(label)}</span>
+      <em>${count}</em>
+    </button>
+  `).join("");
+}
+
+function renderSkillCategories() {
+  if (!els.skillsCategories) return;
+  const stats = getDocCategoryStats(skillsIndex);
+  const buttons = [
+    { category: "all", label: "全部", count: skillsIndex.length },
+    ...stats.map(([category, count]) => ({ category, label: category, count }))
+  ];
+  els.skillsCategories.innerHTML = buttons.map(({ category, label, count }) => `
+    <button
+      type="button"
+      class="prompt-category-chip${activeSkillCategory === category ? " active" : ""}"
+      data-skill-category="${escapeHtml(category)}"
+      aria-pressed="${activeSkillCategory === category ? "true" : "false"}"
+    >
+      <span>${escapeHtml(label)}</span>
+      <em>${count}</em>
+    </button>
+  `).join("");
+}
+
+function renderMcpCategories() {
+  if (!els.mcpCategories) return;
+  const stats = getDocCategoryStats(mcpIndex);
+  const buttons = [
+    { category: "all", label: "全部", count: mcpIndex.length },
+    ...stats.map(([category, count]) => ({ category, label: category, count }))
+  ];
+  els.mcpCategories.innerHTML = buttons.map(({ category, label, count }) => `
+    <button
+      type="button"
+      class="prompt-category-chip${activeMcpCategory === category ? " active" : ""}"
+      data-mcp-category="${escapeHtml(category)}"
+      aria-pressed="${activeMcpCategory === category ? "true" : "false"}"
+    >
+      <span>${escapeHtml(label)}</span>
+      <em>${count}</em>
+    </button>
+  `).join("");
+}
+
+function renderDocCard(item, { type = "doc" } = {}) {
+  const tags = Array.isArray(item.tags) ? item.tags.slice(0, 4) : [];
+  const links = Array.isArray(item.links) ? item.links.slice(0, 4) : [];
+  const permalink = item.permalink || (type === "skill" ? `#skills?item=${item.id}` : type === "mcp" ? `#mcp?item=${item.id}` : "");
+  const linksHtml = links.length
+    ? `<div class="doc-links">${links.map((link) => `
+        <a href="${escapeHtml(link.url || "#")}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label || link.url || "链接")}</a>
+      `).join("")}</div>`
+    : "";
+  const mcpDetails = type === "mcp"
+    ? `<p class="doc-desc">${escapeHtml(item.description || "")}</p>
+       <dl class="mcp-install-grid">
+         <div><dt>类型</dt><dd>${escapeHtml(item.installType || "待确认")}</dd></div>
+         <div><dt>是否下载</dt><dd>${escapeHtml(item.downloadNeeded || "请查看项目文档")}</dd></div>
+         ${item.installCommand ? `<div><dt>安装命令</dt><dd><code>${escapeHtml(item.installCommand)}</code></dd></div>` : ""}
+         ${item.remoteUrl ? `<div><dt>远程地址</dt><dd>${escapeHtml(item.remoteUrl)}</dd></div>` : ""}
+       </dl>
+       ${item.configHint ? `<pre class="doc-pre mcp-config-pre">${escapeHtml(item.configHint)}</pre>` : ""}
+       ${linksHtml}`
+    : "";
+  const body = type === "prompt"
+    ? `<pre class="doc-pre">${escapeHtml(item.prompt || "")}</pre>`
+    : type === "mcp"
+      ? mcpDetails
+      : `<p class="doc-desc">${escapeHtml(item.howTo || "")}</p>${linksHtml}`;
+
+  const cardActions = type === "prompt"
+    ? `<div class="doc-actions">
+        <button type="button" class="doc-copy" data-copy-text="${escapeHtml(item.prompt || "")}">复制</button>
+        <a class="doc-action-link" href="${escapeHtml(permalink || `#prompts?item=${item.id}`)}">链接</a>
+        ${item.downloadUrl ? `<a class="doc-action-link" href="${escapeHtml(item.downloadUrl)}" download>下载</a>` : ""}
+      </div>`
+    : type === "skill"
+      ? `<div class="doc-actions">
+          <a class="doc-action-link" href="${escapeHtml(permalink)}">链接</a>
+          ${item.downloadUrl ? `<a class="doc-action-link" href="${escapeHtml(item.downloadUrl)}" download>下载</a>` : ""}
+        </div>`
+      : type === "mcp"
+        ? `<div class="doc-actions">
+            <a class="doc-action-link" href="${escapeHtml(permalink)}">链接</a>
+            ${item.downloadUrl ? `<a class="doc-action-link" href="${escapeHtml(item.downloadUrl)}" download>下载</a>` : ""}
+          </div>`
+      : "";
+
+  return `
+    <article class="doc-card" data-doc-id="${escapeHtml(item.id)}">
+      <div class="doc-head">
+        <div class="doc-title">
+          <strong>${escapeHtml(item.title || "未命名")}</strong>
+          ${tags.length ? `<span class="doc-tags">${tags.map((t) => `<em>${escapeHtml(t)}</em>`).join("")}</span>` : ""}
+        </div>
+        ${cardActions}
+      </div>
+      ${body}
+    </article>
+  `;
+}
+
+function renderPromptsPage() {
+  if (!els.promptsGrid || !els.promptsMeta) return;
+  const query = els.promptsSearch?.value?.trim() || "";
+  const categoryFiltered = activePromptCategory === "all"
+    ? promptsIndex
+    : promptsIndex.filter((item) => getPromptCategory(item) === activePromptCategory);
+  const filtered = categoryFiltered.filter((item) => matchesQuery(item, query));
+  if (els.promptsHeading) {
+    els.promptsHeading.textContent = activePromptCategory === "all" ? "全部 Prompt" : `${activePromptCategory} Prompt`;
+  }
+  els.promptsMeta.textContent = query
+    ? `当前分类 ${categoryFiltered.length} 条，搜索命中 ${filtered.length} 条`
+    : `共 ${filtered.length} 条`;
+  renderPromptCategories();
+  els.promptsGrid.innerHTML = filtered.map((item) => renderDocCard(item, { type: "prompt" })).join("") || '<p class="mini-empty">暂无数据</p>';
+}
+
+function renderSkillsPage() {
+  if (!els.skillsGrid || !els.skillsMeta) return;
+  const query = els.skillsSearch?.value?.trim() || "";
+  const categoryFiltered = activeSkillCategory === "all"
+    ? skillsIndex
+    : skillsIndex.filter((item) => getDocCategory(item) === activeSkillCategory);
+  const filtered = categoryFiltered.filter((item) => matchesQuery(item, query));
+  if (els.skillsHeading) {
+    els.skillsHeading.textContent = activeSkillCategory === "all" ? "全部 Skill" : `${activeSkillCategory} Skill`;
+  }
+  els.skillsMeta.textContent = query
+    ? `当前分类 ${categoryFiltered.length} 条，搜索命中 ${filtered.length} 条`
+    : `共 ${filtered.length} 条`;
+  renderSkillCategories();
+  els.skillsGrid.innerHTML = filtered.map((item) => renderDocCard(item, { type: "skill" })).join("") || '<p class="mini-empty">暂无数据</p>';
+}
+
+function renderMcpPage() {
+  if (!els.mcpGrid || !els.mcpMeta) return;
+  const query = els.mcpSearch?.value?.trim() || "";
+  const categoryFiltered = activeMcpCategory === "all"
+    ? mcpIndex
+    : mcpIndex.filter((item) => getDocCategory(item) === activeMcpCategory);
+  const filtered = categoryFiltered.filter((item) => matchesQuery(item, query));
+  if (els.mcpHeading) {
+    els.mcpHeading.textContent = activeMcpCategory === "all" ? "全部 MCP" : `${activeMcpCategory}`;
+  }
+  els.mcpMeta.textContent = query
+    ? `当前分类 ${categoryFiltered.length} 条，搜索命中 ${filtered.length} 条`
+    : `共 ${filtered.length} 条`;
+  renderMcpCategories();
+  els.mcpGrid.innerHTML = filtered.map((item) => renderDocCard(item, { type: "mcp" })).join("") || '<p class="mini-empty">暂无数据</p>';
 }
 
 async function loadLabToolMapForDirectory() {
@@ -446,18 +702,80 @@ function getViewFromHash() {
   const hash = location.hash.replace("#", "").split("?")[0];
   if (hash === "rankings") return "rankings";
   if (hash === "lab") return "lab";
+  if (hash === "prompts") return "prompts";
+  if (hash === "skills") return "skills";
+  if (hash === "mcp") return "mcp";
   return "tools";
+}
+
+function getHashParam(name) {
+  const query = location.hash.includes("?") ? location.hash.split("?").slice(1).join("?") : "";
+  return new URLSearchParams(query).get(name) || "";
+}
+
+function focusDocCard(container, itemId) {
+  if (!container || !itemId) return;
+  const card = container.querySelector(`[data-doc-id="${CSS.escape(itemId)}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+  card.classList.add("is-focused");
+  window.setTimeout(() => card.classList.remove("is-focused"), 1800);
+}
+
+function focusSkillFromHash() {
+  const itemId = getHashParam("item");
+  if (!itemId) return;
+  const item = skillsIndex.find((skill) => skill.id === itemId);
+  if (!item) return;
+  activeSkillCategory = getDocCategory(item);
+  renderSkillsPage();
+  window.requestAnimationFrame(() => focusDocCard(els.skillsGrid, itemId));
+}
+
+function focusPromptFromHash() {
+  const itemId = getHashParam("item");
+  if (!itemId) return;
+  const item = promptsIndex.find((prompt) => prompt.id === itemId);
+  if (!item) return;
+  activePromptCategory = getDocCategory(item);
+  renderPromptsPage();
+  window.requestAnimationFrame(() => focusDocCard(els.promptsGrid, itemId));
+}
+
+function focusMcpFromHash() {
+  const itemId = getHashParam("item");
+  if (!itemId) return;
+  const item = mcpIndex.find((mcp) => mcp.id === itemId);
+  if (!item) return;
+  activeMcpCategory = getDocCategory(item);
+  renderMcpPage();
+  window.requestAnimationFrame(() => focusDocCard(els.mcpGrid, itemId));
 }
 
 function setAppView(view, { scroll = true } = {}) {
   const isTools = view === "tools";
   const isRankings = view === "rankings";
   const isLab = view === "lab";
+  const isPrompts = view === "prompts";
+  const isSkills = view === "skills";
+  const isMcp = view === "mcp";
 
   els.toolsView?.classList.toggle("is-hidden", !isTools);
   if (els.rankingsPage) {
     els.rankingsPage.hidden = !isRankings;
     els.rankingsPage.classList.toggle("is-active", isRankings);
+  }
+  if (els.promptsPage) {
+    els.promptsPage.hidden = !isPrompts;
+    els.promptsPage.classList.toggle("is-active", isPrompts);
+  }
+  if (els.skillsPage) {
+    els.skillsPage.hidden = !isSkills;
+    els.skillsPage.classList.toggle("is-active", isSkills);
+  }
+  if (els.mcpPage) {
+    els.mcpPage.hidden = !isMcp;
+    els.mcpPage.classList.toggle("is-active", isMcp);
   }
   if (els.labPage) {
     els.labPage.hidden = !isLab;
@@ -467,12 +785,25 @@ function setAppView(view, { scroll = true } = {}) {
   document.body.classList.toggle("view-rankings", isRankings);
   document.body.classList.toggle("view-lab", isLab);
   document.body.classList.toggle("view-tools", isTools);
+  document.body.classList.toggle("view-prompts", isPrompts);
+  document.body.classList.toggle("view-skills", isSkills);
+  document.body.classList.toggle("view-mcp", isMcp);
 
   const navKey = isLab ? "lab" : isRankings ? "rankings" : "directory";
-  updateTopNav(navKey);
+  const subKey = isPrompts ? "prompts" : isSkills ? "skills" : isMcp ? "mcp" : "directory";
+  updateTopNav(navKey, subKey);
 
   if (!isTools) {
     if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+    if (isPrompts) {
+      window.requestAnimationFrame(() => focusPromptFromHash());
+    }
+    if (isSkills) {
+      window.requestAnimationFrame(() => focusSkillFromHash());
+    }
+    if (isMcp) {
+      window.requestAnimationFrame(() => focusMcpFromHash());
+    }
     if (isLab) {
       window.NeuxLab?.onShow?.();
     }
@@ -481,9 +812,17 @@ function setAppView(view, { scroll = true } = {}) {
   }
 }
 
-function updateTopNav(activeNav) {
+function updateTopNav(activeNav, activeSub = "directory") {
   els.topNav?.querySelectorAll(".top-nav-link").forEach((link) => {
-    const isActive = link.dataset.nav === activeNav;
+    const nav = link.dataset.nav;
+    if (!nav) return;
+    const isActive = nav === activeNav;
+    if (isActive) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+
+  els.topNav?.querySelectorAll("[data-nav-sub]").forEach((link) => {
+    const isActive = link.dataset.navSub === activeSub;
     if (isActive) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
@@ -493,14 +832,18 @@ function initAppNav() {
   els.topNav?.querySelectorAll(".top-nav-link").forEach((link) => {
     link.addEventListener("click", (event) => {
       const nav = link.dataset.nav;
+      if (!nav) return;
+
       if (nav === "rankings") {
         event.preventDefault();
+        closeDirectoryMenu();
         setAppView("rankings");
         history.replaceState(null, "", "#rankings");
         return;
       }
       if (nav === "lab") {
         event.preventDefault();
+        closeDirectoryMenu();
         setAppView("lab");
         const provider = new URLSearchParams(location.search).get("provider");
         history.replaceState(
@@ -512,7 +855,15 @@ function initAppNav() {
         return;
       }
       if (nav === "directory") {
+        // 这是下拉触发器：只负责开关菜单
+        if (link.classList.contains("top-nav-trigger")) {
+          event.preventDefault();
+          toggleDirectoryMenu();
+          return;
+        }
+
         event.preventDefault();
+        closeDirectoryMenu();
         setAppView("tools");
         history.replaceState(null, "", "#directory");
         document.querySelector("#directory")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -520,9 +871,64 @@ function initAppNav() {
     });
   });
 
+  els.topNav?.querySelectorAll("[data-nav-sub]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const sub = link.dataset.navSub;
+      if (!sub) return;
+      event.preventDefault();
+      closeDirectoryMenu();
+
+      if (sub === "directory") {
+        setAppView("tools");
+        history.replaceState(null, "", "#directory");
+        document.querySelector("#directory")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      if (sub === "prompts") {
+        setAppView("prompts");
+        history.replaceState(null, "", "#prompts");
+        return;
+      }
+      if (sub === "skills") {
+        setAppView("skills");
+        history.replaceState(null, "", "#skills");
+        return;
+      }
+      if (sub === "mcp") {
+        setAppView("mcp");
+        history.replaceState(null, "", "#mcp");
+      }
+    });
+  });
+
   window.addEventListener("hashchange", () => {
     setAppView(getViewFromHash(), { scroll: false });
   });
+
+  document.addEventListener("click", (event) => {
+    if (!els.topNavDirectoryGroup) return;
+    if (els.topNavDirectoryGroup.contains(event.target)) return;
+    closeDirectoryMenu();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    closeDirectoryMenu();
+  });
+}
+
+function toggleDirectoryMenu() {
+  if (!els.topNavDirectoryGroup || !els.topNavDirectoryMenu || !els.topNavDirectoryTrigger) return;
+  const open = els.topNavDirectoryGroup.classList.toggle("is-open");
+  els.topNavDirectoryMenu.hidden = !open;
+  els.topNavDirectoryTrigger.setAttribute("aria-expanded", String(open));
+}
+
+function closeDirectoryMenu() {
+  if (!els.topNavDirectoryGroup || !els.topNavDirectoryMenu || !els.topNavDirectoryTrigger) return;
+  els.topNavDirectoryGroup.classList.remove("is-open");
+  els.topNavDirectoryMenu.hidden = true;
+  els.topNavDirectoryTrigger.setAttribute("aria-expanded", "false");
 }
 
 function bindEvents() {
@@ -735,6 +1141,50 @@ function bindEvents() {
     },
     { passive: true }
   );
+}
+
+function bindDocPageEvents() {
+  els.promptsSearch?.addEventListener("input", () => renderPromptsPage());
+  els.skillsSearch?.addEventListener("input", () => renderSkillsPage());
+  els.mcpSearch?.addEventListener("input", () => renderMcpPage());
+
+  els.promptsCategories?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-prompt-category]");
+    if (!button) return;
+    activePromptCategory = button.dataset.promptCategory || "all";
+    renderPromptsPage();
+    els.promptsGrid?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  els.skillsCategories?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-skill-category]");
+    if (!button) return;
+    activeSkillCategory = button.dataset.skillCategory || "all";
+    renderSkillsPage();
+    els.skillsGrid?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  els.mcpCategories?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-mcp-category]");
+    if (!button) return;
+    activeMcpCategory = button.dataset.mcpCategory || "all";
+    renderMcpPage();
+    els.mcpGrid?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  document.addEventListener("click", async (event) => {
+    const copy = event.target.closest(".doc-copy");
+    if (!copy) return;
+    const text = copy.dataset.copyText || "";
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      copy.textContent = "已复制";
+      window.setTimeout(() => (copy.textContent = "复制"), 1200);
+    } catch {
+      // fallback: do nothing
+    }
+  });
 }
 
 function hydrateStats() {
@@ -1729,6 +2179,11 @@ function render() {
   syncViewToggle();
   els.toolGrid?.classList.toggle("is-compact", state.viewMode === "compact");
   writeStateToURL();
+
+  // 非工具页（Prompts/Skills/MCP）渲染
+  renderPromptsPage();
+  renderSkillsPage();
+  renderMcpPage();
 }
 
 function renderResultHeader(filtered, paging = {}) {
