@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>飞机射击小游戏</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}
+#game-container{position:relative;display:flex;flex-direction:column;align-items:center}
+canvas{display:block;border:2px solid #335;border-radius:8px;box-shadow:0 0 30px rgba(50,100,255,.3);background:#050515}
+#ui-layer{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:none;color:#fff;font-size:18px;text-shadow:0 0 8px rgba(0,150,255,.8)}
+.game-over-overlay{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);flex-direction:column;justify-content:center;align-items:center;border-radius:8px;pointer-events:auto}
+.game-over-overlay.active{display:flex}
+.start-overlay{display:flex;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);flex-direction:column;justify-content:center;align-items:center;border-radius:8px;pointer-events:auto;z-index:2}
+.start-overlay.hidden{display:none}
+.start-overlay h2{color:#66ccff;font-size:32px;margin-bottom:10px;text-shadow:0 0 20px rgba(80,180,255,.8)}
+.start-overlay p{color:#aab;margin-bottom:22px;font-size:14px;text-align:center;line-height:1.6;max-width:280px}
+#game-controls{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:2}
+#game-controls button{padding:8px 18px;font-size:14px;border:none;border-radius:20px;background:rgba(30,40,80,.85);color:#cde;border:1px solid rgba(100,140,255,.35);cursor:pointer;letter-spacing:1px;transition:transform .15s,background .15s}
+#game-controls button:hover{transform:scale(1.05);background:rgba(50,70,130,.95)}
+#game-controls button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+#btn-pause{background:linear-gradient(135deg,#4466aa,#5588cc)}
+#btn-stop{background:linear-gradient(135deg,#884455,#aa5566)}
+.game-over-overlay h2{color:#ff4466;font-size:36px;margin-bottom:12px;text-shadow:0 0 20px rgba(255,60,60,.8)}
+.game-over-overlay .final-score{color:#ffd700;font-size:22px;margin-bottom:24px}
+.start-overlay button,.game-over-overlay button{padding:12px 36px;font-size:18px;border:none;border-radius:25px;background:linear-gradient(135deg,#ff4466,#ff6688);color:#fff;cursor:pointer;letter-spacing:2px;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 15px rgba(255,60,60,.4)}
+.start-overlay button{background:linear-gradient(135deg,#3388ff,#55aaff);box-shadow:0 4px 15px rgba(60,140,255,.4)}
+.start-overlay button:hover,.game-over-overlay button:hover{transform:scale(1.08)}
+.game-over-overlay button:hover{box-shadow:0 6px 22px rgba(255,60,60,.6)}
+.start-overlay button:hover{box-shadow:0 6px 22px rgba(60,140,255,.6)}
+#mobile-controls{display:none;margin-top:12px;grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px);gap:4px}
+#mobile-controls button{width:50px;height:50px;font-size:24px;border:2px solid #556;border-radius:12px;background:rgba(20,20,40,.8);color:#aaf;cursor:pointer;touch-action:manipulation;user-select:none}
+#btn-u{grid-column:2;grid-row:1}
+#btn-l{grid-column:1;grid-row:2}
+#btn-r{grid-column:3;grid-row:2}
+#btn-d{grid-column:2;grid-row:3}
+#btn-fire{grid-column:1/4;grid-row:4;width:100%;margin-top:8px;background:rgba(255,60,60,.6)}
+@media(max-width:520px){
+  canvas{width:100vw;height:auto;border-radius:0}
+  #mobile-controls{display:grid}
+  #game-container{touch-action:none}
+}
+canvas{touch-action:none}
+
+</style>
+</head>
+<body>
+<div id="game-container">
+  <canvas id="canvas" width="400" height="600"></canvas>
+  <div id="ui-layer">
+    <span id="score">💥 0</span>
+    <span id="lives">❤️❤️❤️</span>
+  </div>
+  <div id="start-overlay" class="start-overlay">
+    <h2>飞机射击</h2>
+    <p>方向键 / WASD 移动<br>自动射击，击落敌机得分</p>
+    <button id="start">开始游戏</button>
+  </div>
+  <div id="overlay" class="game-over-overlay">
+    <h2>游戏结束</h2>
+    <p class="final-score" id="final">得分：0</p>
+    <button id="restart">重新开始</button>
+  </div>
+  <div id="game-controls">
+    <button id="btn-pause" disabled>暂停</button>
+    <button id="btn-stop" disabled>停止</button>
+  </div>
+  <div id="mobile-controls">
+    <button id="btn-l">◀</button>
+    <button id="btn-d">▼</button>
+    <button id="btn-u">▲</button>
+    <button id="btn-r">▶</button>
+  </div>
+</div>
+<script>
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),W=400,H=600;
+let player={x:W/2-18,y:H-80,w:36,h:40,spd:5};
+let bullets=[],enemies=[],powerups=[],stars=[],score=0,lives=3,level=1,gameState='idle',shotCD=200,lastShot=0,lastSpawn=0,bSpawn=1200;
+let keys={left:!1,right:!1,up:!1,down:!1,space:!1};
+for(let i=0;i<100;i++)stars.push({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+.5,v:Math.random()*2+.3});
+function rc(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+function spawnE(){
+  let t='basic',h=1,c='#ff6655',w=34,h2=30,sp=2+Math.random()*1.5+level*.3;
+  let r=Math.random();
+  if(r<.15){t='tough';h=3;w=42;h2=36;c='#cc44aa';}
+  else if(r<.4){t='fast';sp*=1.8;c='#ffaa00';}
+  enemies.push({x:Math.random()*(W-w-20)+10,y:-50,w:w,h:h2,spd:sp,type:t,hp:h,color:c,dead:!1});
+}
+function shoot(){
+  bullets.push({x:player.x+player.w/2-2,y:player.y-5,w:4,h:14,sx:0,sy:-8,dmg:1});
+}
+function triple(){
+  let cx=player.x+player.w/2,cy=player.y-5;
+  for(let a=-12;a<=12;a+=12)bullets.push({x:cx-2,y:cy,w:4,h:14,sx:Math.sin(a*Math.PI/180)*6,sy:Math.cos(a*Math.PI/180)*-8,dmg:1});
+}
+function spawnP(){
+  if(Math.random()<.002*level)powerups.push({x:Math.random()*(W-30)+15,y:-30,w:24,h:24,spd:2,type:'triple',collected:!1});
+}
+function restart(){
+  player={x:W/2-18,y:H-80,w:36,h:40,spd:5};bullets=[];enemies=[];powerups=[];
+  score=0;lives=3;level=1;gameState='playing';lastShot=0;lastSpawn=0;
+  document.getElementById('overlay').classList.remove('active');
+  document.getElementById('start-overlay').classList.add('hidden');
+  syncControlButtons();updateUI();
+}
+function startGame(){
+  player={x:W/2-18,y:H-80,w:36,h:40,spd:5};bullets=[];enemies=[];powerups=[];
+  score=0;lives=3;level=1;gameState='playing';lastShot=0;lastSpawn=0;
+  document.getElementById('start-overlay').classList.add('hidden');
+  document.getElementById('overlay').classList.remove('active');
+  syncControlButtons();updateUI();
+}
+function pauseGame(){
+  if(gameState!=='playing')return;
+  gameState='paused';syncControlButtons();
+}
+function resumeGame(){
+  if(gameState!=='paused')return;
+  gameState='playing';syncControlButtons();
+}
+function stopGame(){
+  gameState='idle';bullets=[];enemies=[];powerups=[];
+  document.getElementById('start-overlay').classList.remove('hidden');
+  document.getElementById('overlay').classList.remove('active');
+  syncControlButtons();
+}
+function syncControlButtons(){
+  const pauseBtn=document.getElementById('btn-pause');
+  const stopBtn=document.getElementById('btn-stop');
+  const playing=gameState==='playing';
+  const paused=gameState==='paused';
+  pauseBtn.disabled=!(playing||paused);
+  stopBtn.disabled=!(playing||paused);
+  pauseBtn.textContent=paused?'继续':'暂停';
+}
+function updateUI(){
+  document.getElementById('score').textContent='💥 '+score;
+  let h='';for(let i=0;i<lives;i++)h+='❤️';
+  document.getElementById('lives').textContent=h||'💔';
+  document.getElementById('final').textContent='得分：'+score;
+}
+function update(t){
+  if(gameState!=='playing')return;
+  let dx=0,dy=0;
+  if(keys.left||keys.a)dx-=1;if(keys.right||keys.d)dx+=1;
+  if(keys.up||keys.w)dy-=1;if(keys.down||keys.s)dy+=1;
+  if(dx||dy){let l=Math.sqrt(dx*dx+dy*dy);dx=dx/l*player.spd;dy=dy/l*player.spd;}
+  player.x+=dx;player.y+=dy;
+  if(player.x<0)player.x=0;if(player.x+player.w>W)player.x=W-player.w;
+  if(player.y<0)player.y=0;if(player.y+player.h>H)player.y=H-player.h;
+  let n=performance.now();
+  if(n-lastShot>shotCD){shoot();lastShot=n;}
+  if(keys.space&&n-lastShot>shotCD){shoot();lastShot=n;}
+  for(let b of bullets){b.x+=b.sx;b.y+=b.sy;}
+  bullets=bullets.filter(b=>b.y+b.h>0&&b.y<H&&b.x+b.w>0&&b.x<W);
+  for(let b of bullets)for(let e of enemies)if(!e.dead&&rc(b,e)){e.hp-=b.dmg;b.hit=!0;if(e.hp<=0){e.dead=!0;score+=(e.type=='tough'?30:e.type=='fast'?15:10);updateUI();}}
+  bullets=bullets.filter(b=>!b.hit);enemies=enemies.filter(e=>!e.dead);
+  for(let e of enemies){e.y+=e.spd;}enemies=enemies.filter(e=>e.y<H+60);
+  for(let e of enemies)if(!e.dead&&rc(player,e)){e.dead=!0;lives--;updateUI();if(lives<=0){gameState='over';document.getElementById('overlay').classList.add('active');document.getElementById('final').textContent='得分：'+score;syncControlButtons();return}}
+  for(let p of powerups){p.y+=p.spd;if(rc(player,p)){if(p.type=='triple')triple();p.collected=!0;}}
+  powerups=powerups.filter(p=>!p.collected&&p.y<H+30);
+  let si=Math.max(400,bSpawn-level*80);
+  if(n-lastSpawn>si){spawnE();lastSpawn=n;if(Math.random()<.3+level*.05)spawnE();spawnP();}
+  let nl=Math.floor(score/300)+1;if(nl>level)level=nl;
+  for(let s of stars){s.y+=s.v;if(s.y>H){s.y=-5;s.x=Math.random()*W;}}
+}
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0a0a20');g.addColorStop(1,'#04081a');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#fff';
+  for(let s of stars){ctx.globalAlpha=.6+s.s*.2;ctx.beginPath();ctx.arc(s.x,s.y,s.s,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=1;
+  for(let p of powerups){
+    ctx.fillStyle='#ffdd00';ctx.shadowColor='#ffdd00';ctx.shadowBlur=10;
+    ctx.beginPath();ctx.arc(p.x+p.w/2,p.y+p.h/2,p.w/2,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='16px sans-serif';ctx.textAlign='center';
+    ctx.fillText('⚡',p.x+p.w/2,p.y+p.h/2+6);ctx.shadowBlur=0;
+  }
+  ctx.fillStyle='#ffdd44';ctx.shadowColor='#ffaa00';ctx.shadowBlur=6;
+  for(let b of bullets)ctx.fillRect(b.x,b.y,b.w,b.h);
+  ctx.shadowBlur=0;
+  for(let e of enemies)if(!e.dead){
+    ctx.fillStyle=e.color;ctx.shadowColor=e.color;ctx.shadowBlur=8;
+    ctx.beginPath();ctx.moveTo(e.x+e.w/2,e.y);ctx.lineTo(e.x+e.w,e.y+e.h/2);
+    ctx.lineTo(e.x+e.w/2,e.y+e.h);ctx.lineTo(e.x,e.y+e.h/2);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#000';ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(e.x+e.w/2-4,e.y+e.h/3,3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(e.x+e.w/2+4,e.y+e.h/3,3,0,Math.PI*2);ctx.fill();
+    if(e.hp>1){ctx.fillStyle='#444';ctx.fillRect(e.x,e.y-8,e.w,4);ctx.fillStyle='#ff4466';ctx.fillRect(e.x,e.y-8,e.w*(e.hp/3),4);}
+  }
+  ctx.shadowBlur=0;
+  ctx.shadowColor='#3399ff';ctx.shadowBlur=15;ctx.fillStyle='#44aaff';
+  ctx.beginPath();ctx.moveTo(player.x+player.w/2,player.y);ctx.lineTo(player.x+player.w,player.y+player.h*.7);
+  ctx.lineTo(player.x+player.w-6,player.y+player.h);ctx.lineTo(player.x+player.w/2,player.y+player.h*.85);
+  ctx.lineTo(player.x+6,player.y+player.h);ctx.lineTo(player.x,player.y+player.h*.7);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#aaddff';ctx.beginPath();ctx.arc(player.x+player.w/2,player.y+player.h*.4,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(player.x+player.w/2,player.y+player.h*.4,3,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#ff6644';ctx.fillRect(player.x+player.w/2-2,player.y+player.h,4,8);
+  ctx.font='16px sans-serif';ctx.textAlign='center';
+  ctx.fillStyle='#ffd700';ctx.fillText('Lv.'+level,W/2,30);
+  if(gameState==='paused'){
+    ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#fff';ctx.font='bold 28px sans-serif';
+    ctx.fillText('已暂停',W/2,H/2);
+    ctx.font='14px sans-serif';ctx.fillStyle='#aab';
+    ctx.fillText('点击「继续」恢复游戏',W/2,H/2+34);
+  }
+}
+function loop(t){
+  update(t);draw();requestAnimationFrame(loop);
+}
+// 键盘事件
+document.addEventListener('keydown',e=>{
+  let k=e.key.toLowerCase();
+  if(k==='arrowleft'||k==='a')keys.left=!0;
+  if(k==='arrowright'||k==='d')keys.right=!0;
+  if(k==='arrowup'||k==='w')keys.up=!0;
+  if(k==='arrowdown'||k==='s')keys.down=!0;
+  if(k===' ')keys.space=!0;
+  e.preventDefault();
+});
+document.addEventListener('keyup',e=>{
+  let k=e.key.toLowerCase();
+  if(k==='arrowleft'||k==='a')keys.left=!1;
+  if(k==='arrowright'||k==='d')keys.right=!1;
+  if(k==='arrowup'||k==='w')keys.up=!1;
+  if(k==='arrowdown'||k==='s')keys.down=!1;
+  if(k===' ')keys.space=!1;
+  e.preventDefault();
+});
+// 移动端控制
+function mobileDown(id){if(id==='left')keys.left=!0;if(id==='right')keys.right=!0;if(id==='up')keys.up=!0;if(id==='down')keys.down=!0;}
+function mobileUp(id){if(id==='left')keys.left=!1;if(id==='right')keys.right=!1;if(id==='up')keys.up=!1;if(id==='down')keys.down=!1;}
+['btn-l','btn-r','btn-u','btn-d'].forEach((bid,idx)=>{
+  let b=document.getElementById(bid);
+  let dir=['left','right','up','down'][idx];
+  b.addEventListener('pointerdown',()=>mobileDown(dir));
+  b.addEventListener('pointerup',()=>mobileUp(dir));
+  b.addEventListener('pointerleave',()=>mobileUp(dir));
+});
+document.getElementById('restart').addEventListener('click',restart);
+document.getElementById('start').addEventListener('click',startGame);
+document.getElementById('btn-pause').addEventListener('click',()=>gameState==='paused'?resumeGame():pauseGame());
+document.getElementById('btn-stop').addEventListener('click',stopGame);
+// 触摸拖动（直接拖动飞机）
+canvas.addEventListener('pointermove',e=>{
+  if(gameState!=='playing')return;
+  let rect=canvas.getBoundingClientRect();
+  let scaleX=W/rect.width,scaleY=H/rect.height;
+  let cx=(e.clientX-rect.left)*scaleX,cy=(e.clientY-rect.top)*scaleY;
+  player.x=cx-player.w/2;player.y=cy-player.h/2;
+  if(player.x<0)player.x=0;if(player.x+player.w>W)player.x=W-player.w;
+  if(player.y<0)player.y=0;if(player.y+player.h>H)player.y=H-player.h;
+});
+canvas.addEventListener('pointerdown',e=>{if(gameState==='playing')canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointerup',e=>{canvas.releasePointerCapture(e.pointerId);});
+canvas.addEventListener('touchstart',e=>e.preventDefault());
+updateUI();
+syncControlButtons();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

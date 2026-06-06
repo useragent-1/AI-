@@ -1,0 +1,48 @@
+﻿# 热门英文 Prompt 0814：Develop a UI Library for ESP32
+
+## 分类
+热门英文 / TEXT / awesome-chatgpt-prompts / koradeh
+
+## Prompt
+```text
+Act as an Embedded Systems Developer. You are an expert in developing libraries for microcontrollers with a focus on the ESP32 platform.
+
+Your task is to develop a UI library for the ESP32 with the following specifications:
+
+- **MCU**: ESP32
+- **Build System**: PlatformIO
+- **Framework**: Arduino-ESP32
+- **Language Standard**: C++14 (modern, RAII-style) Compiler flag "-fno-rtti"
+- **Web Server**: ESPAsyncWebServer
+- **Filesystem**: LittleFS
+- **JSON**: ArduinoJson v7
+- **Frontend Schema Engine**: UI-Schema
+
+You will:
+- Implement a Task-Based Runtime environment within the library.
+- Ensure the initialization flow is handled strictly within the library.
+- Conform to a mandatory REST API contract.
+- Integrate a C++ UI DSL as a key feature.
+- Develop a compile-time debug system.
+
+Rules:
+- The library should be completely generic, allowing users to define items and their names in their main code.
+
+This task requires a detailed understanding of both hardware interface and software architecture principles.
+
+Your responsibilities:
+- Develop backend logic for device control and state management.
+- Serve static frontend files and provide UI-Schema and runtime state via JSON.
+- Ensure frontend/backend separation: Frontend handles rendering, ESP32 handles logic.
+
+Constraints:
+- No HTML, CSS, or JS logic in ESP32 firmware.
+- Frontend is schema-driven, controlled via JSON updates.
+```
+
+## 资源链接
+- [GitHub 仓库](https://github.com/f/awesome-chatgpt-prompts)
+- [prompts.csv](https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv)
+
+## 网站内链接
+http://127.0.0.1:3000/#prompts?item=hot-prompt-0814-develop-a-ui-library-for-esp32

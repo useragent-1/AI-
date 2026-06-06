@@ -1,0 +1,123 @@
+{
+  "name": "html-mpzj29gd",
+  "title": "飞机射击小游戏",
+  "prompt": "请为我生成一个可单机游玩的小游戏（尽量用单个 HTML 文件），玩法与风格：飞机小游戏",
+  "plan": "**飞机射击小游戏计划**\n\n**文件结构**  \n单个 `index.html` 文件，内嵌 CSS 与 JS。\n\n**玩法与特性**  \n- 纵版射击，玩家操控飞机在底部移动，自动发射子弹。  \n- 敌机从顶部随机出现，向下移动。  \n- 击落敌机得分，碰撞敌机或子弹则失去一条命。  \n- 生命耗尽游戏结束，显示分数与重玩按钮。  \n- 难度逐渐提升（敌机速度、生成频率增加）。\n\n**UI 与画面**  \n- Canvas 画布（480×700 或自适应）。  \n- 深空星空背景（JS 绘制滚动星星，模拟飞行感）。  \n- 顶部显示分数和剩余生命（用爱心图标）。  \n- 游戏结束画面：半透明遮罩，居中显示“Game Over”与最终分数，下方“重新开始”按钮。\n\n**交互**  \n- 键盘方向键或 WASD 控制飞机移动，限制边界内。  \n- 自动射击（子弹间隔 200ms），或按空格键发射。  \n- 点击按钮重玩，重置所有状态。\n\n**核心模块（JS）**  \n- 玩家对象：位置、移动速度、绘制三角形/飞机图形。  \n- 子弹数组：从玩家位置向上移动，碰撞检测。  \n- 敌机数组：随机 X 坐标，向下移动，可随机发射子弹（简单版可省略）。  \n- 碰撞检测（矩形/圆形简易判定）。  \n- 游戏循环 `requestAnimationFrame`：更新、绘制、生成敌机。  \n- 状态管理：`gameOver` 标志、`score`、`lives`、`level`。\n\n**可选增强**  \n- 吃到道具（如三向子弹、护盾），增加可玩性。  \n- 音效（Web Audio 简音）。  \n- 手机端支持：虚拟摇杆或触摸拖动。\n\n该计划保证完整可玩，代码量可控，单文件即开即玩。",
+  "providerName": "DeepSeek 官网",
+  "model": "deepseek-v4-pro",
+  "generatedBy": "arena",
+  "mode": "arena",
+  "path": "agent-workspaces/html-mpzj29gd",
+  "previewUrl": "/agent-workspaces/html-mpzj29gd/index.html",
+  "files": [
+    {
+      "type": "folder",
+      "path": "html-mpzj29gd"
+    },
+    {
+      "type": "file",
+      "path": "html-mpzj29gd/index.html"
+    },
+    {
+      "type": "file",
+      "path": "html-mpzj29gd/README.md"
+    },
+    {
+      "type": "file",
+      "path": "html-mpzj29gd/agent-plan.md"
+    }
+  ],
+  "logs": [
+    {
+      "type": "ok",
+      "tool": "create_folder",
+      "message": "agent-workspaces/html-mpzj29gd"
+    },
+    {
+      "type": "ok",
+      "tool": "write_file",
+      "message": "html-mpzj29gd/index.html"
+    },
+    {
+      "type": "ok",
+      "tool": "read_file",
+      "message": "html-mpzj29gd/index.html"
+    },
+    {
+      "type": "error",
+      "tool": "edit_file",
+      "message": "失败：edit_file 需要 oldText"
+    },
+    {
+      "type": "error",
+      "tool": "edit_file",
+      "message": "失败：edit_file 需要 oldText"
+    },
+    {
+      "type": "error",
+      "tool": "edit_file",
+      "message": "失败：edit_file 需要 oldText"
+    },
+    {
+      "type": "ok",
+      "tool": "edit_file",
+      "message": "html-mpzj29gd/index.html"
+    },
+    {
+      "type": "ok",
+      "tool": "read_file",
+      "message": "html-mpzj29gd/index.html"
+    },
+    {
+      "type": "error",
+      "tool": "write_file",
+      "message": "失败：文件内容为空。请按格式返回 JSON 头 + markdown 代码块（```html / ```css / ```javascript）包含完整文件正文。"
+    },
+    {
+      "type": "error",
+      "tool": "write_file",
+      "message": "失败：文件内容为空。请按格式返回 JSON 头 + markdown 代码块（```html / ```css / ```javascript）包含完整文件正文。"
+    },
+    {
+      "type": "ok",
+      "tool": "write_file",
+      "message": "html-mpzj29gd/index.html"
+    },
+    {
+      "type": "ok",
+      "tool": "open_preview",
+      "message": "agent-workspaces/html-mpzj29gd/index.html"
+    },
+    {
+      "type": "ok",
+      "tool": "read_file",
+      "message": "html-mpzj29gd/index.html"
+    },
+    {
+      "type": "error",
+      "tool": "edit_file",
+      "message": "失败：edit_file 需要 oldText"
+    },
+    {
+      "type": "ok",
+      "tool": "edit_file",
+      "message": "html-mpzj29gd/index.html"
+    },
+    {
+      "type": "ok",
+      "tool": "open_preview",
+      "message": "agent-workspaces/html-mpzj29gd/index.html"
+    },
+    {
+      "type": "ok",
+      "tool": "read_file",
+      "message": "html-mpzj29gd/index.html"
+    },
+    {
+      "type": "ok",
+      "tool": "open_preview",
+      "message": "/agent-workspaces/html-mpzj29gd/index.html"
+    }
+  ],
+  "createdAt": "2026-06-04T13:28:46.508Z"
+}
